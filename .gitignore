@@ -32,6 +32,7 @@ wandb/
 # Local datasets and generated training data
 data/raw/*
 !data/raw/README.md
+data/wikipedia/
 data/interim/
 data/private/
 data/processed/*

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import glob
 import json
 import math
 import re
@@ -15,6 +16,7 @@ from marichatmen.constants import ALLOWED_CATEGORIES, DEFAULT_ALLOWED_LICENSES
 from marichatmen.data.license_filter import normalize_license
 from marichatmen.data.load_villanova import iter_villanova_examples
 from marichatmen.data.transliterate_andaluh import strip_thinking, to_andaluh
+from marichatmen.io import iter_jsonl
 
 WORD_RE = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñÇçÂÊÎÔÛâêîôû]{2,32}")
 ANDALUH_MARKER_RE = re.compile(r"[ÇçÂÊÎÔÛâêîôû]")
@@ -52,7 +54,48 @@ def _token_count(tokenizer: Any, text: str) -> int:
     return len(tokenizer(text, add_special_tokens=False)["input_ids"])
 
 
+def _local_jsonl_files(dataset: str) -> list[Path]:
+    if any(char in dataset for char in "*?[]"):
+        return [Path(item) for item in sorted(glob.glob(dataset))]
+    path = Path(dataset)
+    if path.is_file() and path.suffix.lower() in {".json", ".jsonl"}:
+        return [path]
+    if path.is_dir():
+        return sorted(path.glob("*.jsonl"))
+    return []
+
+
+def _iter_local_text_pairs(args: argparse.Namespace) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
+    for file_path in _local_jsonl_files(args.dataset):
+        for row_index, row in enumerate(iter_jsonl(file_path)):
+            metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+            language = row.get("language") or metadata.get("language")
+            if language and language != args.language:
+                continue
+            text = row.get("text")
+            if not isinstance(text, str):
+                continue
+            spanish = strip_thinking(text)
+            if len(spanish) < 24:
+                continue
+            andaluh = to_andaluh(
+                spanish,
+                variant=args.variant,
+                informal_strength=args.informal_strength,
+                seed=args.seed + len(pairs) * 1009 + row_index,
+            )
+            pairs.append((spanish, andaluh))
+            if len(pairs) >= args.n_texts:
+                return pairs
+    return pairs
+
+
 def _iter_text_pairs(args: argparse.Namespace) -> list[tuple[str, str]]:
+    local_pairs = _iter_local_text_pairs(args)
+    if local_pairs:
+        return local_pairs
+
     allowed = {normalize_license(item) for item in args.allowed_licenses}
     pairs: list[tuple[str, str]] = []
     for row in iter_villanova_examples(
