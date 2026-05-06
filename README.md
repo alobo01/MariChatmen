@@ -47,7 +47,8 @@ bash scripts/train_qwen_andaluh_local.sh
 
 After Qwen-Andaluh exists, train the fictional persona from the persona seed
 file in `data/persona/`. The same seed dataset is published on Hugging Face as
-[`alobos/MariChatmen-Persona`](https://huggingface.co/datasets/alobos/MariChatmen-Persona).
+[`alobos/MariChatmen-Persona`](https://huggingface.co/datasets/alobos/MariChatmen-Persona)
+under CC BY 4.0.
 
 ```bash
 bash scripts/train_marichatmen_local.sh

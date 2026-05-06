@@ -2,7 +2,7 @@
 pretty_name: MariChatmen Persona
 language:
 - es
-license: apache-2.0
+license: cc-by-4.0
 task_categories:
 - text-generation
 tags:
@@ -180,7 +180,14 @@ Qwen base
 
 ## Licence
 
-Released under Apache-2.0.
+Released under Creative Commons Attribution 4.0 International (CC BY 4.0).
+
+Attribution suggestion:
+
+```text
+MariChatmen Persona dataset by Antonio Lobo, released under CC BY 4.0.
+https://huggingface.co/datasets/alobos/MariChatmen-Persona
+```
 
 ## Citations And Related Sources
 

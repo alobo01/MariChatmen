@@ -8,7 +8,8 @@ generated locally or on Conway and intentionally excluded from git.
 ## Public Persona Data
 
 `data/persona/marichatmen_persona_sft_12000.jsonl` contains 12,000 synthetic
-TRL-style conversational rows for the fictional MariChatmen persona.
+TRL-style conversational rows for the fictional MariChatmen persona. The
+published persona seed dataset is released under CC BY 4.0.
 
 It is released separately on Hugging Face as:
 
