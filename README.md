@@ -12,6 +12,10 @@ Qwen-Andaluh first, then MariChatmen.
 `MariChatmen` is trained later from a Qwen-Andaluh checkpoint after the accent
 and Spanish-leak gates pass.
 
+The current written target is Sevillian-leaning EPA with `ç` output
+(`sevillian_ce`), e.g. `Çebiya çabe açêh coçâ bonitâ`, not the plainer `s`
+variant.
+
 The project builds:
 
 - license-filtered Spanish SFT data from `VillanovaAI/villanova-sft-2603`
@@ -53,6 +57,8 @@ bash scripts/run_tests.sh
 This is the non-persona base path. The 0.8B run is only for systems validation.
 The next quality target is `Qwen/Qwen3.5-4B-Base` with a Qwen-compatible
 expanded tokenizer, longer CPT, longer SFT, and stricter ORPO.
+The tokenizer audit writes both plots and a markdown report with concrete
+examples and the highest-saving Andaluh tokens.
 
 ```bash
 uv run python scripts/download_datasets.py --only villanova

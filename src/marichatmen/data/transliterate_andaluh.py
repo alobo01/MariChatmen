@@ -46,16 +46,31 @@ def _fallback_epa(text: str) -> str:
     return out
 
 
-def epa(text: str, variant: str = "seseo") -> str:
+def _vaf_for_variant(variant: str) -> str:
+    normalized = variant.lower().replace("-", "_")
+    return {
+        "sevillian": "ç",
+        "sevillian_ce": "ç",
+        "seseo_ce": "ç",
+        "seseo_ç": "ç",
+        "epa_ce": "ç",
+        "seseo": "s",
+        "ceceo": "z",
+        "zezeo": "z",
+        "heheo": "h",
+    }.get(normalized, "ç")
+
+
+def epa(text: str, variant: str = "sevillian_ce") -> str:
     module = _andaluh_module()
     if module is None:
         return _fallback_epa(text)
-    vaf = {"seseo": "s", "ceceo": "z", "zezeo": "z", "heheo": "h"}.get(variant, "s")
+    vaf = _vaf_for_variant(variant)
     try:
-        return module.epa(text, vaf=vaf)
+        return module.epa(text, vaf=vaf, vvf="h", escape_links=True)
     except TypeError:
         try:
-            return module.epa(text)
+            return module.epa(text, vaf=vaf)
         except Exception:
             return _fallback_epa(text)
     except Exception:
@@ -65,7 +80,7 @@ def epa(text: str, variant: str = "seseo") -> str:
 def to_andaluh(
     text: str,
     *,
-    variant: str = "seseo",
+    variant: str = "sevillian_ce",
     informal_strength: float = 0.0,
     protect_spans: bool = True,
     seed: int | None = None,

@@ -86,13 +86,13 @@ def _iter_text_pairs(args: argparse.Namespace) -> list[tuple[str, str]]:
     return pairs
 
 
-def _candidate_tokens(tokenizer: Any, andaluh_texts: list[str], limit: int) -> list[str]:
+def _candidate_token_stats(tokenizer: Any, andaluh_texts: list[str], limit: int) -> list[dict[str, Any]]:
     vocab = tokenizer.get_vocab()
     counts: Counter[str] = Counter()
     for text in andaluh_texts:
         counts.update(match.group(0).lower() for match in WORD_RE.finditer(text))
 
-    scored: list[tuple[int, int, str]] = []
+    scored: list[tuple[int, int, str, int]] = []
     for word, freq in counts.items():
         if word in vocab or word.isdigit():
             continue
@@ -102,9 +102,21 @@ def _candidate_tokens(tokenizer: Any, andaluh_texts: list[str], limit: int) -> l
         if pieces <= 1:
             continue
         score = (pieces - 1) * freq
-        scored.append((score, freq, word))
+        scored.append((score, freq, word, pieces))
     scored.sort(reverse=True)
-    return [word for _, _, word in scored[:limit]]
+    return [
+        {
+            "token": word,
+            "frequency": freq,
+            "base_token_count": pieces,
+            "saving_score": score,
+        }
+        for score, freq, word, pieces in scored[:limit]
+    ]
+
+
+def _candidate_tokens(tokenizer: Any, andaluh_texts: list[str], limit: int) -> list[str]:
+    return [row["token"] for row in _candidate_token_stats(tokenizer, andaluh_texts, limit)]
 
 
 def _looks_andaluh(word: str) -> bool:
@@ -186,6 +198,62 @@ def _bar_svg(path: Path, summary: dict[str, Any]) -> None:
     path.write_text("\n".join(parts) + "\n", encoding="utf-8")
 
 
+def _write_markdown_report(path: Path, summary: dict[str, Any], pairs: list[tuple[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    base = summary["base"]
+    expanded = summary["expanded"]
+    top_tokens = summary["top_added_token_stats"][:20]
+    lines = [
+        "# Qwen-Andaluh Tokenizer Audit",
+        "",
+        "This report explains tokenizer expansion with concrete examples rather than only totals.",
+        "",
+        "## Summary",
+        "",
+        f"- Source examples audited: {summary['examples']}",
+        f"- Variant: `{summary['variant']}`; VAF output favours `ç` for the Sevillian target.",
+        f"- Tokenizer mode: `{summary['tokenizer_mode']}`",
+        f"- Added tokens: {summary['added_tokens']}",
+        f"- Andaluh token overhead before expansion: {base['andaluh_token_overhead_pct']:.2f}%",
+        f"- Andaluh token reduction after expansion: {expanded['andaluh_reduction_pct']:.2f}%",
+        "",
+        "## Example Transformations",
+        "",
+    ]
+    for spanish, andaluh in pairs[:5]:
+        lines.extend(
+            [
+                "```text",
+                f"Spanish: {spanish[:240]}",
+                f"Andaluh: {andaluh[:240]}",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Most Useful Added Tokens",
+            "",
+            "| Token | Frequency | Base pieces | Saving score |",
+            "| --- | ---: | ---: | ---: |",
+        ]
+    )
+    for row in top_tokens:
+        lines.append(
+            f"| `{row['token']}` | {row['frequency']} | "
+            f"{row['base_token_count']} | {row['saving_score']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "The saving score is `frequency * (base_token_count - 1)`. A high score means "
+            "the old tokenizer repeatedly split that Andaluh form into several pieces.",
+            "",
+        ]
+    )
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
 def run(args: argparse.Namespace) -> None:
     from transformers import AutoTokenizer
 
@@ -195,7 +263,8 @@ def run(args: argparse.Namespace) -> None:
         raise RuntimeError("No Spanish/Andaluh text pairs were built for tokenizer analysis.")
 
     andaluh_texts = [andaluh for _, andaluh in pairs]
-    candidates = _candidate_tokens(base_tokenizer, andaluh_texts, args.new_tokens)
+    candidate_stats = _candidate_token_stats(base_tokenizer, andaluh_texts, args.new_tokens)
+    candidates = [row["token"] for row in candidate_stats]
     if args.mode == "expand":
         adapted_tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
         added_count = adapted_tokenizer.add_tokens(candidates)
@@ -244,7 +313,9 @@ def run(args: argparse.Namespace) -> None:
         "save_tokenizer_dir": str(save_dir),
         "base": base_summary,
         "expanded": expanded_summary,
+        "variant": args.variant,
         "top_added_tokens": candidates[:50],
+        "top_added_token_stats": candidate_stats[:100],
     }
 
     output_json = Path(args.output_json)
@@ -264,6 +335,8 @@ def run(args: argparse.Namespace) -> None:
     )
     _write_csv(Path(args.output_csv), rows)
     _bar_svg(Path(args.plot_svg), summary)
+    if args.output_md:
+        _write_markdown_report(Path(args.output_md), summary, pairs)
     if args.mode == "expand":
         action = f"after adding {added_count} Qwen-compatible tokens"
     else:
@@ -289,12 +362,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--new_tokens", type=int, default=256)
     parser.add_argument("--mode", choices=["expand", "retrain"], default="expand")
     parser.add_argument("--retrain_vocab_size", type=int, default=0)
-    parser.add_argument("--variant", default="seseo")
+    parser.add_argument("--variant", default="sevillian_ce")
     parser.add_argument("--informal_strength", type=float, default=0.0)
     parser.add_argument("--save_tokenizer_dir", default="outputs/tokenizers/qwen35_08b_andaluh")
     parser.add_argument("--output_json", default="reports/tokenizer/qwen_andaluh_tokenizer_impact.json")
     parser.add_argument("--output_csv", default="reports/tokenizer/qwen_andaluh_tokenizer_impact.csv")
     parser.add_argument("--plot_svg", default="reports/plots/qwen_andaluh_tokenizer_impact.svg")
+    parser.add_argument("--output_md", default="reports/tokenizer/qwen_andaluh_tokenizer_impact.md")
     parser.add_argument("--seed", type=int, default=45)
     parser.add_argument("--no_streaming", action="store_true")
     return parser.parse_args()

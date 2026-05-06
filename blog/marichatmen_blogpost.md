@@ -117,6 +117,25 @@ Train LoRA adapters plus the new token embeddings.
 Keep original Qwen token IDs intact.
 ```
 
+For the Sevillian-looking written target I now use the `ç` EPA output rather
+than plain `s`. A concrete example:
+
+```text
+Spanish:
+Sevilla sabe hacer cosas bonitas.
+
+Plain-s seseo:
+Sebiya sabe asêh cosâ bonitâ.
+
+Current project target:
+Çebiya çabe açêh coçâ bonitâ.
+```
+
+This matters for both style and tokenisation. If `Çebiya`, `çabe`, `açêh`,
+`coçâ`, `Andalûh`, `ehtá`, `loh`, `pa`, and similar forms are split into many
+small pieces, the model pays a tax every time it reads or writes the target
+orthography.
+
 The audit metric is:
 
 ```text
@@ -125,6 +144,18 @@ ATIR = tokens(Andalûh text) / tokens(Spanish text)
 
 If ATIR remains too high after 1,536 tokens, I will audit 2,048 tokens before
 considering a deeper tokenizer experiment.
+
+The tokenizer report now includes a reader-facing table like this:
+
+| Token | Frequency | Base pieces | Saving score |
+| --- | ---: | ---: | ---: |
+| `çebiya` | example count | old split count | frequency × saved pieces |
+| `andalûh` | example count | old split count | frequency × saved pieces |
+| `reppondêh` | example count | old split count | frequency × saved pieces |
+
+The exact values come from the current corpus audit, not from hand-picked
+examples. That makes the report technical, but still easy to read: it shows
+which Andalûh forms actually cost the tokenizer the most.
 
 ## TRL contracts
 
@@ -176,7 +207,7 @@ The next quality run is:
 ```text
 Qwen/Qwen3.5-4B-Base
 seq_len: 1024
-tokenizer: Qwen-compatible + 1,536 Andalûh tokens
+tokenizer: Qwen-compatible + 1,536 Andalûh tokens, `ç` Sevillian target
 LoRA rank: 32
 LoRA alpha: 64
 CPT target: 50M-100M tokens

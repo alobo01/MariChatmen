@@ -3,7 +3,7 @@ stage: tokenizer_expansion
 strategy: qwen_compatible_expand
 new_tokens: 1536
 mode: expand
-variant: seseo
+variant: sevillian_ce
 informal_strength: 0.0
 save_tokenizer_dir: outputs/tokenizers/qwen35_4b_andaluh_1536
 notes:

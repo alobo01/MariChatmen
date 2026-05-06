@@ -24,12 +24,13 @@ if [[ "${MCM_ANALYZE_TOKENIZER:-1}" == "1" ]]; then
     --new_tokens "${MCM_NEW_TOKENS:-1536}" \
     --mode "${MCM_TOKENIZER_MODE:-expand}" \
     --retrain_vocab_size "${MCM_RETRAIN_VOCAB_SIZE:-0}" \
-    --variant seseo \
+    --variant sevillian_ce \
     --informal_strength "${MCM_BASE_INFORMAL_STRENGTH:-0.0}" \
     --save_tokenizer_dir "${MCM_TOKENIZER_DIR:-${ARTIFACT_ROOT}/outputs/tokenizers/qwen35_andaluh}" \
     --output_json "${ARTIFACT_ROOT}/reports/tokenizer/qwen_andaluh_tokenizer_impact.json" \
     --output_csv "${ARTIFACT_ROOT}/reports/tokenizer/qwen_andaluh_tokenizer_impact.csv" \
-    --plot_svg "${ARTIFACT_ROOT}/reports/plots/qwen_andaluh_tokenizer_impact.svg"
+    --plot_svg "${ARTIFACT_ROOT}/reports/plots/qwen_andaluh_tokenizer_impact.svg" \
+    --output_md "${ARTIFACT_ROOT}/reports/tokenizer/qwen_andaluh_tokenizer_impact.md"
 fi
 
 uv run python -m marichatmen.data.build_cpt \
@@ -40,7 +41,7 @@ uv run python -m marichatmen.data.build_cpt \
   --n_valid "${MCM_CPT_VALID:-200}" \
   --n_probe "${MCM_CPT_PROBE:-128}" \
   --user_andaluh_ratio 0.5 \
-  --variant seseo \
+  --variant sevillian_ce \
   --informal_strength "${MCM_BASE_INFORMAL_STRENGTH:-0.0}" \
   --system_prompt "${SYSTEM_PROMPT}" \
   --fallback_fixture tests/fixtures/spanish_sft_fixture.jsonl \
@@ -55,7 +56,7 @@ uv run python -m marichatmen.data.build_sft \
   --eval_prompts "${MCM_EVAL_PROMPTS:-80}" \
   --user_andaluh_ratio 0.5 \
   --assistant_andaluh_ratio 1.0 \
-  --variant seseo \
+  --variant sevillian_ce \
   --informal_strength "${MCM_BASE_INFORMAL_STRENGTH:-0.0}" \
   --system_prompt "${SYSTEM_PROMPT}" \
   --fallback_fixture tests/fixtures/spanish_sft_fixture.jsonl \

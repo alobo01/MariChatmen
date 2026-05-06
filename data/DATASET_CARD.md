@@ -41,7 +41,8 @@ Wikipedia is being downloaded from the exact Wikimedia dump below:
 Wikipedia text must be cited as Spanish Wikipedia contributors via Wikimedia
 Dumps. Treat text reuse as CC BY-SA 4.0/GFDL, not plain CC BY 4.0. Derived CPT
 rows must include the dump URL, article title when available, source file, and
-the transformation `andaluh_epa_seseo`.
+the transformation `andaluh_epa_sevillian_ce`. This is the Sevillian-leaning
+EPA target that favours `ç` output, for example `Çebiya çabe açêh coçâ bonitâ`.
 
 Additional Spanish sources evaluated for future or optional builds:
 

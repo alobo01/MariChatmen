@@ -54,5 +54,5 @@ def test_build_wikipedia_cpt_from_xml(tmp_path):
     assert len(rows) == 1
     assert rows[0]["metadata"]["source_license"] == "CC-BY-SA-4.0/GFDL"
     assert rows[0]["metadata"]["source_article_title"] == "Aprendizaje automático"
-    assert rows[0]["metadata"]["transformation"] == "andaluh_epa_seseo"
+    assert rows[0]["metadata"]["transformation"] == "andaluh_epa_sevillian_ce"
     assert manifest["source_url"] == "https://dumps.wikimedia.org/eswiki/20260501/"

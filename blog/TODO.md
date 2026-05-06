@@ -27,6 +27,11 @@ instruction following > 0.80
 - The next headline model is `Qwen/Qwen3.5-4B-Base`, not 0.8B.
 - Spanish Wikipedia `eswiki` 2026-05-01 is being integrated as CPT data and
   must be cited as CC BY-SA 4.0/GFDL text, not plain CC BY 4.0.
+- The report should stay technical but readable: every metric section needs at
+  least one concrete example, such as a Spanish -> Andaluh sentence, a
+  high-saving tokenizer token, or a chosen/rejected ORPO pair.
+- The written target is `sevillian_ce`, favouring `ç` output rather than the
+  plainer `s` variant.
 
 ## 0.1 Process The Wikipedia Dump
 
@@ -178,6 +183,10 @@ Replace interim claims with final ones:
 - final 4B Qwen-Andaluh CPT/SFT/ORPO losses
 - final 4B Qwen-Andaluh MARI-AAS and Spanish leak rate
 - Wikipedia CPT token count and manifest path
+- top tokenizer-expanded Andaluh tokens with frequency, base-piece count, and
+  saving score
+- example transformation table using `ç`, e.g. `Sevilla sabe hacer cosas
+  bonitas` -> `Çebiya çabe açêh coçâ bonitâ`
 - ORPO reward accuracy, reward margins, log-odds ratio, and NLL by rejection class
 - persona GRPO reward components only if persona is resumed after gates pass
 - bootstrap 95% confidence intervals over evaluation prompts

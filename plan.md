@@ -34,6 +34,7 @@ and leakage gates.
 | --- | --- |
 | Tokenizer strategy | Qwen-compatible expanded tokenizer, not full tokenizer retraining |
 | Initial added tokens | 1,536 Andaluh tokens for the 4B quality run |
+| Orthographic target | Sevillian-leaning EPA with `ç` output (`sevillian_ce`) |
 | Quality model | `Qwen/Qwen3.5-4B-Base` first |
 | Smoke model | 0.8B is for systems validation only |
 | Baseline model | 2B is for local/baseline debugging |
@@ -67,6 +68,9 @@ bash scripts/run_tests.sh
   `/data2/antonio/MariChatmen`, not `/home/antonio/MariChatmen`.
 - Local generation helpers now accept `--tokenizer_name` and resize embeddings
   to match expanded tokenizers.
+- Tokenizer audit now writes a markdown report with example transformations and
+  the most useful added-token candidates by frequency, base-piece count, and
+  saving score.
 
 ### Running / Interim
 
@@ -135,6 +139,8 @@ Text reused under CC BY-SA 4.0 and GFDL; transformed to Andaluh EPA for CPT.
 ### Stage 2: Tokenizer
 
 - Expand Qwen tokenizer with 1,536 Andaluh tokens.
+- Prefer the `sevillian_ce` variant so examples use forms such as `Çebiya`,
+  `çabe`, and `açêh` rather than plain-s output.
 - Train LoRA plus new-token embeddings only.
 - Do not use full tokenizer retraining for release adapters unless a separate
   embedding-relearning experiment is explicitly planned.

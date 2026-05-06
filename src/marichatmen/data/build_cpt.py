@@ -231,7 +231,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n_valid", type=int, default=200)
     parser.add_argument("--n_probe", type=int, default=128)
     parser.add_argument("--user_andaluh_ratio", type=float, default=0.5)
-    parser.add_argument("--variant", default="seseo")
+    parser.add_argument("--variant", default="sevillian_ce")
     parser.add_argument("--informal_strength", type=float, default=0.0)
     parser.add_argument("--system_prompt", default=SYSTEM_PROMPT_BASE)
     parser.add_argument("--out_dir", default="data/processed/base")

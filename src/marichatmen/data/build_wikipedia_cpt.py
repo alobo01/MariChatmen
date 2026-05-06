@@ -138,7 +138,7 @@ def _make_row(
             "source_dump_file_url": WIKIPEDIA_ESWIKI_20260501_ARTICLES,
             "language": "spa",
             "split_view": split_view,
-            "transformation": "andaluh_epa_seseo" if transformed else "original_spanish",
+            "transformation": f"andaluh_epa_{args.variant}" if transformed else "original_spanish",
             "transliterator": "andalugeeks/andaluh-py" if transformed else None,
         },
     }
@@ -242,7 +242,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min_words", type=int, default=200)
     parser.add_argument("--max_words", type=int, default=2500)
     parser.add_argument("--andaluh_ratio", type=float, default=0.9)
-    parser.add_argument("--variant", default="seseo")
+    parser.add_argument("--variant", default="sevillian_ce")
     parser.add_argument("--informal_strength", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=46)
     return parser.parse_args(argv)
