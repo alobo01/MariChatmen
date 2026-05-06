@@ -32,6 +32,18 @@ instruction following > 0.80
   high-saving tokenizer token, or a chosen/rejected ORPO pair.
 - The written target is `sevillian_ce`, favouring `ç` output rather than the
   plainer `s` variant.
+- Be explicit that the current runs have **not** used all available data. The
+  repository now has enough raw/source material for much larger Andalûh runs,
+  but completed runs are still subset runs:
+  - `base_long` on Conway: 20k CPT rows, 20k SFT rows, 10k ORPO pairs.
+  - Wikipedia quick subset: 4k CPT train rows, 400 valid rows, 200 probe rows.
+  - Persona file split: 9k persona SFT train rows, 1.8k persona ORPO train
+    pairs, 1.5k GRPO prompts.
+  These are useful engineering milestones, not the final 50M-100M-token 4B CPT
+  corpus.
+- Add a section on the planned MariChatmen self-verified reward. The key point:
+  deterministic MARI-AAS/MARI-PAS is not enough, because the model can learn
+  persona keywords without answering correctly.
 
 ## 0.1 Process The Wikipedia Dump
 
@@ -198,6 +210,13 @@ Replace interim claims with final ones:
 - GPU utilisation plots
 - best and worst qualitative examples
 - clear statement of whether each model is release-ready
+- explicit data-utilisation table: data available, data processed, data used by
+  each completed run, and what is still unused
+- self-verified reward design for MariChatmen:
+  - deterministic checks: accent, persona, repetition, hostility, alcohol safety
+  - verifier check: did the answer actually address the prompt?
+  - evidence requirement: verifier must identify short spans supporting its score
+  - reward agreement: reward only when verifier and deterministic metrics agree
 
 Do not publish a MariChatmen persona article until the base Qwen-Andaluh gates
 have actually passed.
@@ -316,6 +335,10 @@ Before publishing:
 - [ ] Add human calibration if available: MARI metric Spearman correlation with blind pairwise preferences.
 - [ ] Replace placeholder SVGs with real plots where useful.
 - [ ] Add final sample outputs for Base, SFT, ORPO, and GRPO.
+- [ ] Add a data-utilisation table so the reader can see that current runs are
+      subset runs, not "all the data".
+- [ ] Implement and calibrate the Mari self-verified reward before serious
+      persona GRPO.
 - [x] Push persona seed dataset to Hugging Face.
 - [x] Push 0.8B Qwen-Andaluh and MariChatmen adapters to Hugging Face.
 - [ ] Push remaining 2B/4B adapter models to Hugging Face if release-worthy.

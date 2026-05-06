@@ -71,6 +71,26 @@ Spanish, Guanaco Spanish, and SMC-instruct. For public derived data, source
 licences are tracked and filtered. Villanova rows are filtered by language,
 category, and source licence before transformation.
 
+The honest current state is that I am **not yet using all the data**. I have
+enough source material to build a much larger Qwen-Andaluh corpus, but the
+completed runs are still subset runs.
+
+Current processed data on Conway:
+
+| Split | Current size | Meaning |
+| --- | ---: | --- |
+| `base_long` CPT | 20,000 train rows | filtered Villanova-style chat text converted for CPT |
+| `base_long` SFT | 20,000 train rows | assistant always converted to Andalûh |
+| `base_long` ORPO | 10,000 train pairs | Andalûh chosen vs weaker rejected answers |
+| Wikipedia quick CPT | 4,000 train rows | smoke subset from `eswiki` 2026-05-01 |
+| Persona SFT | 9,000 train rows | MariChatmen persona examples |
+| Persona ORPO | 1,800 train pairs | persona preference pairs |
+| Persona GRPO prompts | 1,500 prompts | prompt-only persona reward set |
+
+That is enough to validate the pipeline, but not enough to claim the final
+Andalûh model. The next 4B run should use a much larger Wikipedia-derived CPT
+corpus and larger instruction/preference splits.
+
 The next important CPT source is Spanish Wikipedia:
 
 ```text
@@ -253,6 +273,26 @@ So the pipeline is now:
 3. Make it prefer Andalûh over Spanish.
 4. Only then make it MariChatmen.
 ```
+
+For the persona stage I also need a stronger reward than simple keyword
+counting. A high MariChatmen score should not mean "mentioned Feria, SFDK and
+gazpacho". It should mean:
+
+```text
++ answered the user's question
++ stayed in Andalûh
++ sounded like MariChatmen
++ avoided keyword soup
++ avoided caricature and regional hostility
+```
+
+The plan is a **self-verified reward**. Each generated answer will be scored by
+deterministic checks such as MARI-AAS, MARI-PAS, repetition, hostility and
+alcohol-safety penalties. Then a frozen verifier pass will judge whether the
+answer actually addressed the prompt and must point to short evidence spans in
+the answer. GRPO should only reward outputs where the verifier and the
+deterministic metrics agree. If an answer has strong persona markers but does
+not answer the question, it should be penalised.
 
 That is the honest state of the project.
 

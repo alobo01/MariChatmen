@@ -84,9 +84,18 @@ bash scripts/run_tests.sh
 
 - No publication-quality Qwen-Andaluh checkpoint exists yet.
 - No 4B Qwen-Andaluh checkpoint has passed the release gates.
-- Wikipedia/eswiki data has not yet been integrated into a completed quality
-  run.
+- Wikipedia/eswiki data has only been used in a **quick 0.8B CPT smoke subset**
+  so far: 4,000 train rows, 400 validation rows, and 200 probe rows. The full
+  local XML dump exists, but it has not been converted into the 50M-100M-token
+  quality CPT corpus yet.
 - FineWeb2/mC4 large CPT sources are not yet wired into a completed quality run.
+- The largest completed Qwen-Andaluh base dataset on Conway is still
+  `base_long`: 20,000 CPT rows, 20,000 SFT rows, and 10,000 ORPO pairs from
+  filtered Villanova-style data. This is useful, but it is not "all available
+  data" and is below the locked 4B quality targets.
+- The latest 0.8B Wikipedia quick run used Wikipedia for CPT/tokenizer audit,
+  but SFT/ORPO still fell back to repeated fixture-style instruction rows. It
+  should be treated as an integration test, not evidence about final data scale.
 - MARI-AAS v3 gates are not yet implemented as the final model selection score.
 - Manual 50-sample gate has not been passed.
 - Persona should remain frozen for new quality training.
@@ -180,7 +189,17 @@ Only after Qwen-Andaluh passes:
 - Generate/review persona SFT examples.
 - Train persona SFT.
 - Train persona ORPO with keyword-soup and caricature negatives.
-- Run GRPO only if persona samples are already coherent.
+- Add a self-verified Mari reward before serious GRPO:
+  - candidate answer first gets deterministic checks: MARI-AAS, MARI-PAS,
+    repetition, unsupported persona-keyword density, regional hostility, and
+    alcohol-safety checks;
+  - a frozen verifier pass then scores whether the answer actually answered the
+    prompt, stayed in MariChatmen voice, avoided keyword soup, and can point to
+    short evidence spans in its own text;
+  - GRPO only receives high reward when the verifier and deterministic metrics
+    agree. High persona score with low task-answer quality must be penalized.
+- Run GRPO only if persona samples are already coherent and the self-verifier is
+  calibrated on held-out good/bad Mari examples.
 
 ## Publication Truth
 
@@ -194,3 +213,9 @@ Current blog/report wording must say:
 - Wikipedia eswiki 20260501 is an optional CPT source being integrated, with
   CC BY-SA 4.0/GFDL attribution.
 - MariChatmen persona is frozen until Qwen-Andaluh passes the base accent gates.
+- We are not yet using all available data. Current completed runs are subset
+  runs; the next serious Qwen-Andaluh run must process a much larger Wikipedia
+  CPT corpus and use larger filtered SFT/ORPO splits.
+- MariChatmen personality should use a self-verified reward rather than pure
+  keyword/persona heuristics, because the first smoke runs showed that persona
+  markers can hide weak answers.
