@@ -22,7 +22,7 @@ The project builds:
 - MariChatmen 0.8B LoRA:
   <https://huggingface.co/MariChatmen/marichatmen-0.8b-lora>
 - MariChatmen Persona dataset:
-  <https://huggingface.co/datasets/alobos/MariChatmen-Persona>
+  <https://huggingface.co/datasets/MariChatmen/MariChatmen-Persona>
 
 ## Setup
 
@@ -56,7 +56,7 @@ bash scripts/train_qwen_andaluh_local.sh
 
 After Qwen-Andaluh exists, train the fictional persona from the persona seed
 file in `data/persona/`. The same seed dataset is published on Hugging Face as
-[`alobos/MariChatmen-Persona`](https://huggingface.co/datasets/alobos/MariChatmen-Persona)
+[`MariChatmen/MariChatmen-Persona`](https://huggingface.co/datasets/MariChatmen/MariChatmen-Persona)
 under CC BY 4.0.
 
 ```bash

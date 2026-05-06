@@ -139,10 +139,10 @@ The persona seed dataset has been uploaded:
 
 ```text
 MariChatmen Persona dataset:
-https://huggingface.co/datasets/alobos/MariChatmen-Persona
+https://huggingface.co/datasets/MariChatmen/MariChatmen-Persona
 
-Upload commit:
-https://huggingface.co/datasets/alobos/MariChatmen-Persona/commit/5abbb0a1fc6e857d6d99924440cc36b436c36a1d
+Latest dataset commit:
+https://huggingface.co/datasets/MariChatmen/MariChatmen-Persona/commit/1e5d859b336bbe147882703b89c8c96a2fca6036
 ```
 
 I did **not** find any uploaded public Hugging Face model links recorded in the

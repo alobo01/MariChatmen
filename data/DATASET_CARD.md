@@ -1,7 +1,7 @@
 # MariChatmen Data Card
 
 This repository ships code, tiny public fixtures, and the synthetic persona seed
-data that is also published as `alobos/MariChatmen-Persona`. Full generated SFT,
+data that is also published as `MariChatmen/MariChatmen-Persona`. Full generated SFT,
 ORPO, GRPO, benchmark, tokenizer-analysis datasets, model adapters, and logs are
 generated locally or on Conway and intentionally excluded from git.
 
@@ -14,7 +14,7 @@ published persona seed dataset is released under CC BY 4.0.
 It is released separately on Hugging Face as:
 
 ```text
-alobos/MariChatmen-Persona
+MariChatmen/MariChatmen-Persona
 ```
 
 The persona file is used to generate:

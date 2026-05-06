@@ -78,7 +78,7 @@ Attribution suggestion:
 
 ```text
 MariChatmen Persona dataset by Antonio Lobo, released under CC BY 4.0.
-https://huggingface.co/datasets/alobos/MariChatmen-Persona
+https://huggingface.co/datasets/MariChatmen/MariChatmen-Persona
 ```
 
 ## Notes
