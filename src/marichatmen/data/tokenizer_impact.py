@@ -16,8 +16,36 @@ from marichatmen.data.license_filter import normalize_license
 from marichatmen.data.load_villanova import iter_villanova_examples
 from marichatmen.data.transliterate_andaluh import strip_thinking, to_andaluh
 
-WORD_RE = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñÇçÂÊÎÔÛâêîôû]{3,32}")
+WORD_RE = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñÇçÂÊÎÔÛâêîôû]{2,32}")
 ANDALUH_MARKER_RE = re.compile(r"[ÇçÂÊÎÔÛâêîôû]")
+COMMON_ANDALUH_FORMS = {
+    "andalûh",
+    "andaluh",
+    "çebiya",
+    "çebiyano",
+    "çebiyana",
+    "ehtá",
+    "ehtán",
+    "ehtoy",
+    "ehtamoh",
+    "ehto",
+    "ehta",
+    "er",
+    "loh",
+    "lah",
+    "pa",
+    "mu",
+    "muh",
+    "tó",
+    "toa",
+    "toah",
+    "cansao",
+    "demasiao",
+    "sentío",
+    "perdío",
+    "venío",
+    "salío",
+}
 
 
 def _token_count(tokenizer: Any, text: str) -> int:
@@ -68,7 +96,7 @@ def _candidate_tokens(tokenizer: Any, andaluh_texts: list[str], limit: int) -> l
     for word, freq in counts.items():
         if word in vocab or word.isdigit():
             continue
-        if not ANDALUH_MARKER_RE.search(word):
+        if not _looks_andaluh(word):
             continue
         pieces = _token_count(tokenizer, word)
         if pieces <= 1:
@@ -77,6 +105,14 @@ def _candidate_tokens(tokenizer: Any, andaluh_texts: list[str], limit: int) -> l
         scored.append((score, freq, word))
     scored.sort(reverse=True)
     return [word for _, _, word in scored[:limit]]
+
+
+def _looks_andaluh(word: str) -> bool:
+    if ANDALUH_MARKER_RE.search(word):
+        return True
+    if word in COMMON_ANDALUH_FORMS:
+        return True
+    return bool(re.search(r"(ao|ío|ía|âh|êh|ôh|ûh)$", word))
 
 
 def _summary(tokenizer: Any, pairs: list[tuple[str, str]]) -> dict[str, float]:
@@ -160,27 +196,51 @@ def run(args: argparse.Namespace) -> None:
 
     andaluh_texts = [andaluh for _, andaluh in pairs]
     candidates = _candidate_tokens(base_tokenizer, andaluh_texts, args.new_tokens)
-    expanded_tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
-    added_count = expanded_tokenizer.add_tokens(candidates)
+    if args.mode == "expand":
+        adapted_tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
+        added_count = adapted_tokenizer.add_tokens(candidates)
+        vocab_delta = added_count
+    else:
+        retrain_vocab_size = args.retrain_vocab_size or len(base_tokenizer)
+        adapted_tokenizer = base_tokenizer.train_new_from_iterator(
+            andaluh_texts,
+            vocab_size=retrain_vocab_size,
+        )
+        added_count = 0
+        vocab_delta = len(adapted_tokenizer) - len(base_tokenizer)
     save_dir = Path(args.save_tokenizer_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
-    expanded_tokenizer.save_pretrained(save_dir)
+    adapted_tokenizer.save_pretrained(save_dir)
     (save_dir / "added_tokens_qwen_andaluh.txt").write_text(
         "\n".join(candidates) + "\n",
         encoding="utf-8",
     )
+    if args.mode == "retrain":
+        (save_dir / "TOKENIZER_COMPATIBILITY_WARNING.md").write_text(
+            "# Tokenizer Compatibility Warning\n\n"
+            "This tokenizer was retrained from text and does not preserve the original "
+            "Qwen token-id semantics. It is useful for analysis or a from-scratch "
+            "embedding adaptation experiment, but it should not be used for normal "
+            "LoRA/QLoRA adapter release unless the model embeddings have been trained "
+            "accordingly.\n",
+            encoding="utf-8",
+        )
 
     base_summary = _summary(base_tokenizer, pairs)
-    expanded_summary = _summary(expanded_tokenizer, pairs)
+    expanded_summary = _summary(adapted_tokenizer, pairs)
     expanded_summary["andaluh_reduction_pct"] = 100 * (
         1 - expanded_summary["andaluh_tokens"] / max(1, base_summary["andaluh_tokens"])
     )
     summary = {
         "model_name": args.model_name,
         "dataset": args.dataset,
+        "tokenizer_mode": args.mode,
         "examples": len(pairs),
         "requested_new_tokens": args.new_tokens,
         "added_tokens": added_count,
+        "vocab_delta": vocab_delta,
+        "adapted_vocab_size": len(adapted_tokenizer),
+        "retrain_vocab_size": (args.retrain_vocab_size or len(base_tokenizer)) if args.mode == "retrain" else None,
         "save_tokenizer_dir": str(save_dir),
         "base": base_summary,
         "expanded": expanded_summary,
@@ -204,11 +264,17 @@ def run(args: argparse.Namespace) -> None:
     )
     _write_csv(Path(args.output_csv), rows)
     _bar_svg(Path(args.plot_svg), summary)
+    if args.mode == "expand":
+        action = f"after adding {added_count} Qwen-compatible tokens"
+    else:
+        action = (
+            f"with a retrained tokenizer "
+            f"(vocab_delta={vocab_delta}, adapted_vocab_size={len(adapted_tokenizer)})"
+        )
     print(
         "Tokenizer impact: "
         f"Andaluh overhead={base_summary['andaluh_token_overhead_pct']:.2f}% before, "
-        f"reduction={expanded_summary['andaluh_reduction_pct']:.2f}% after adding "
-        f"{added_count} tokens."
+        f"reduction={expanded_summary['andaluh_reduction_pct']:.2f}% {action}."
     )
 
 
@@ -221,6 +287,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--allowed_licenses", nargs="+", default=sorted(DEFAULT_ALLOWED_LICENSES))
     parser.add_argument("--n_texts", type=int, default=2000)
     parser.add_argument("--new_tokens", type=int, default=256)
+    parser.add_argument("--mode", choices=["expand", "retrain"], default="expand")
+    parser.add_argument("--retrain_vocab_size", type=int, default=0)
     parser.add_argument("--variant", default="seseo")
     parser.add_argument("--informal_strength", type=float, default=0.0)
     parser.add_argument("--save_tokenizer_dir", default="outputs/tokenizers/qwen35_08b_andaluh")

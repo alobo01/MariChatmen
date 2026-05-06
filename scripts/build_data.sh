@@ -22,6 +22,8 @@ if [[ "${MCM_ANALYZE_TOKENIZER:-1}" == "1" ]]; then
     --allowed_licenses apache-2.0 MIT \
     --n_texts "${MCM_TOKENIZER_TEXTS:-2000}" \
     --new_tokens "${MCM_NEW_TOKENS:-256}" \
+    --mode "${MCM_TOKENIZER_MODE:-expand}" \
+    --retrain_vocab_size "${MCM_RETRAIN_VOCAB_SIZE:-0}" \
     --variant seseo \
     --informal_strength "${MCM_BASE_INFORMAL_STRENGTH:-0.0}" \
     --save_tokenizer_dir "${MCM_TOKENIZER_DIR:-${ARTIFACT_ROOT}/outputs/tokenizers/qwen35_andaluh}" \

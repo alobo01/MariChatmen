@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import argparse
 
-from marichatmen.constants import SYSTEM_PROMPT_INFERENCE
+from marichatmen.constants import SYSTEM_PROMPT_BASE
 from marichatmen.eval.generation_eval import generate_response, load_causal_model, load_tokenizer
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", default="Qwen/Qwen3.5-0.8B")
+    parser.add_argument("--tokenizer_name", default="")
     parser.add_argument("--adapter_path", default="")
+    parser.add_argument("--system_prompt", default=SYSTEM_PROMPT_BASE)
     parser.add_argument("--max_new_tokens", type=int, default=192)
     parser.add_argument("--no_4bit", action="store_true")
     return parser.parse_args()
@@ -19,10 +21,15 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    tokenizer = load_tokenizer(args.model_name)
-    model = load_causal_model(args.model_name, args.adapter_path or None, load_in_4bit=not args.no_4bit)
-    messages = [{"role": "system", "content": SYSTEM_PROMPT_INFERENCE}]
-    print("MariChatmen CLI. Ctrl-D to exit.")
+    tokenizer = load_tokenizer(args.model_name, args.tokenizer_name or None)
+    model = load_causal_model(
+        args.model_name,
+        args.adapter_path or None,
+        load_in_4bit=not args.no_4bit,
+        tokenizer_len=len(tokenizer),
+    )
+    messages = [{"role": "system", "content": args.system_prompt}]
+    print("MariChatmen/Qwen-Andaluh CLI. Ctrl-D to exit.")
     while True:
         try:
             user = input("User> ").strip()
