@@ -153,10 +153,16 @@ Fill these before publication:
 
 ```text
 Qwen-Andaluh 0.8B adapter:
-https://huggingface.co/<namespace>/qwen-andaluh-0.8b-lora
+https://huggingface.co/MariChatmen/qwen-andaluh-0.8b-lora
+
+Qwen-Andaluh 0.8B upload commit:
+https://huggingface.co/MariChatmen/qwen-andaluh-0.8b-lora/commit/932d680d82ea0f0dd1da7cf9c5609d42df705158
 
 MariChatmen 0.8B adapter:
-https://huggingface.co/<namespace>/marichatmen-0.8b-lora
+https://huggingface.co/MariChatmen/marichatmen-0.8b-lora
+
+MariChatmen 0.8B upload commit:
+https://huggingface.co/MariChatmen/marichatmen-0.8b-lora/commit/838878e7a351f46c8a3f44a05de908bb249ae4c7
 
 Qwen-Andaluh 2B adapter:
 https://huggingface.co/<namespace>/qwen-andaluh-2b-lora
@@ -227,8 +233,9 @@ Before publishing:
 - [ ] Replace placeholder SVGs with real plots where useful.
 - [ ] Add final sample outputs for Base, SFT, ORPO, and GRPO.
 - [x] Push persona seed dataset to Hugging Face.
-- [ ] Push adapter models to Hugging Face.
-- [ ] Replace all `<namespace>` Hugging Face placeholders with real links.
+- [x] Push 0.8B Qwen-Andaluh and MariChatmen adapters to Hugging Face.
+- [ ] Push remaining 2B/4B adapter models to Hugging Face if release-worthy.
+- [ ] Replace remaining `<namespace>` Hugging Face placeholders with real links.
 - [ ] Add model cards and licence notes to every HF repo.
 - [ ] Re-read the article and remove any stale "interim" wording.
 - [ ] Check that no private data or large artifacts are committed.

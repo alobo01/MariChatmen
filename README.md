@@ -15,6 +15,15 @@ The project builds:
 - MARI-AAS v1 accent/style evaluation plus MARI-PAS persona scoring
 - side-by-side base/SFT/ORPO/GRPO stage examples
 
+## Hugging Face Releases
+
+- Qwen-Andaluh 0.8B LoRA:
+  <https://huggingface.co/MariChatmen/qwen-andaluh-0.8b-lora>
+- MariChatmen 0.8B LoRA:
+  <https://huggingface.co/MariChatmen/marichatmen-0.8b-lora>
+- MariChatmen Persona dataset:
+  <https://huggingface.co/datasets/alobos/MariChatmen-Persona>
+
 ## Setup
 
 Install with Python 3.12 managed by `uv`:
