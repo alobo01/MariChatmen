@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
 from pathlib import Path
 from typing import Any
 
@@ -125,7 +126,7 @@ class ProbePerplexityCallback(TrainerCallback):
         return control
 
 
-def _tokenize_dataset(dataset: Any, tokenizer: Any, max_seq_length: int):
+def _tokenize_dataset(dataset: Any, tokenizer: Any, max_seq_length: int, num_proc: int):
     def tokenize(batch: dict[str, list[str]]) -> dict[str, Any]:
         return tokenizer(
             batch["text"],
@@ -135,7 +136,14 @@ def _tokenize_dataset(dataset: Any, tokenizer: Any, max_seq_length: int):
         )
 
     columns = dataset["train"].column_names
-    return dataset.map(tokenize, batched=True, remove_columns=columns)
+    map_kwargs: dict[str, Any] = {
+        "batched": True,
+        "remove_columns": columns,
+        "desc": "Tokenizing CPT rows",
+    }
+    if num_proc > 1:
+        map_kwargs["num_proc"] = num_proc
+    return dataset.map(tokenize, **map_kwargs)
 
 
 def run(args: argparse.Namespace) -> None:
@@ -166,7 +174,12 @@ def run(args: argparse.Namespace) -> None:
             trainable_token_indices=new_token_indices(tokenizer) if args.train_embeddings else None,
         ),
     )
-    tokenized = _tokenize_dataset(raw_dataset, tokenizer, args.max_seq_length)
+    tokenized = _tokenize_dataset(
+        raw_dataset,
+        tokenizer,
+        args.max_seq_length,
+        args.preprocessing_num_workers,
+    )
 
     training_kwargs = {
         "output_dir": args.output_dir,
@@ -174,7 +187,7 @@ def run(args: argparse.Namespace) -> None:
         "max_steps": args.max_steps,
         "learning_rate": args.learning_rate,
         "per_device_train_batch_size": args.per_device_train_batch_size,
-        "per_device_eval_batch_size": 1,
+        "per_device_eval_batch_size": args.per_device_eval_batch_size,
         "gradient_accumulation_steps": args.gradient_accumulation_steps,
         "gradient_checkpointing": args.gradient_checkpointing,
         "bf16": args.bf16,
@@ -191,7 +204,11 @@ def run(args: argparse.Namespace) -> None:
         "report_to": args.report_to,
         "run_name": args.run_name,
         "remove_unused_columns": False,
+        "dataloader_num_workers": args.dataloader_num_workers,
+        "dataloader_pin_memory": args.dataloader_pin_memory,
     }
+    if args.dataloader_num_workers > 0:
+        training_kwargs["dataloader_prefetch_factor"] = args.dataloader_prefetch_factor
     training_args = config_from_supported(TrainingArguments, **training_kwargs)
     trainer = Trainer(
         model=model,
@@ -238,7 +255,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max_steps", type=int, default=-1)
     parser.add_argument("--learning_rate", type=float, default=5e-5)
     parser.add_argument("--per_device_train_batch_size", type=int, default=1)
+    parser.add_argument(
+        "--per_device_eval_batch_size",
+        type=int,
+        default=int(os.environ.get("MCM_EVAL_BATCH_SIZE", "4")),
+    )
     parser.add_argument("--gradient_accumulation_steps", type=int, default=16)
+    parser.add_argument(
+        "--dataloader_num_workers",
+        type=int,
+        default=int(os.environ.get("MCM_DATALOADER_NUM_WORKERS", "4")),
+    )
+    parser.add_argument(
+        "--preprocessing_num_workers",
+        type=int,
+        default=int(os.environ.get("MCM_PREPROCESSING_NUM_WORKERS", "8")),
+    )
+    parser.add_argument(
+        "--dataloader_prefetch_factor",
+        type=int,
+        default=int(os.environ.get("MCM_DATALOADER_PREFETCH_FACTOR", "2")),
+    )
+    parser.add_argument("--dataloader_pin_memory", type=bool_arg, default=True)
     parser.add_argument("--lora_r", type=int, default=16)
     parser.add_argument("--lora_alpha", type=int, default=32)
     parser.add_argument("--lora_dropout", type=float, default=0.05)

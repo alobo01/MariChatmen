@@ -12,12 +12,18 @@ CPT_LR="${MCM_CPT_LR:-5e-5}"
 SFT_LR="${MCM_SFT_LR:-1e-4}"
 ORPO_LR="${MCM_ORPO_LR:-5e-6}"
 ORPO_BETA="${MCM_ORPO_BETA:-0.1}"
+DATALOADER_NUM_WORKERS="${MCM_DATALOADER_NUM_WORKERS:-4}"
+DATALOADER_PREFETCH_FACTOR="${MCM_DATALOADER_PREFETCH_FACTOR:-2}"
+PREPROCESSING_NUM_WORKERS="${MCM_PREPROCESSING_NUM_WORKERS:-8}"
+EVAL_BATCH_SIZE="${MCM_EVAL_BATCH_SIZE:-4}"
+CPU_BUDGET="${MCM_CPU_BUDGET:-12}"
+TORCH_NUM_THREADS="${MCM_TORCH_NUM_THREADS:-$(( CPU_BUDGET > DATALOADER_NUM_WORKERS ? CPU_BUDGET - DATALOADER_NUM_WORKERS : 1 ))}"
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
-export OMP_NUM_THREADS="${OMP_NUM_THREADS:-12}"
-export MKL_NUM_THREADS="${MKL_NUM_THREADS:-12}"
-export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-12}"
-export NUMEXPR_MAX_THREADS="${NUMEXPR_MAX_THREADS:-12}"
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${TORCH_NUM_THREADS}}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-${TORCH_NUM_THREADS}}"
+export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-${TORCH_NUM_THREADS}}"
+export NUMEXPR_MAX_THREADS="${NUMEXPR_MAX_THREADS:-${TORCH_NUM_THREADS}}"
 export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 export HF_HOME="${HF_HOME:-${ARTIFACT_ROOT}/.hf_cache}"
@@ -61,7 +67,11 @@ uv run accelerate launch src/marichatmen/train/train_cpt.py \
   --max_steps "${MCM_CPT_MAX_STEPS:-20}" \
   --learning_rate "${CPT_LR}" \
   --per_device_train_batch_size "${MCM_CPT_BATCH_SIZE:-${MCM_TRAIN_BATCH_SIZE:-1}}" \
+  --per_device_eval_batch_size "${EVAL_BATCH_SIZE}" \
   --gradient_accumulation_steps "${MCM_GRAD_ACCUM:-16}" \
+  --dataloader_num_workers "${DATALOADER_NUM_WORKERS}" \
+  --dataloader_prefetch_factor "${DATALOADER_PREFETCH_FACTOR}" \
+  --preprocessing_num_workers "${PREPROCESSING_NUM_WORKERS}" \
   --lora_r "${LORA_R}" \
   --lora_alpha "${LORA_ALPHA}" \
   --lora_dropout 0.05 \
@@ -88,7 +98,11 @@ uv run accelerate launch src/marichatmen/train/train_sft.py \
   --max_steps "${MCM_SFT_MAX_STEPS:-20}" \
   --learning_rate "${SFT_LR}" \
   --per_device_train_batch_size "${MCM_SFT_BATCH_SIZE:-${MCM_TRAIN_BATCH_SIZE:-1}}" \
+  --per_device_eval_batch_size "${EVAL_BATCH_SIZE}" \
   --gradient_accumulation_steps "${MCM_GRAD_ACCUM:-16}" \
+  --dataloader_num_workers "${DATALOADER_NUM_WORKERS}" \
+  --dataloader_prefetch_factor "${DATALOADER_PREFETCH_FACTOR}" \
+  --preprocessing_num_workers "${PREPROCESSING_NUM_WORKERS}" \
   --lora_r "${LORA_R}" \
   --lora_alpha "${LORA_ALPHA}" \
   --lora_dropout 0.05 \
@@ -115,7 +129,11 @@ uv run accelerate launch src/marichatmen/train/train_orpo.py \
   --max_steps "${MCM_ORPO_MAX_STEPS:-10}" \
   --learning_rate "${ORPO_LR}" \
   --per_device_train_batch_size "${MCM_ORPO_BATCH_SIZE:-${MCM_TRAIN_BATCH_SIZE:-1}}" \
+  --per_device_eval_batch_size "${EVAL_BATCH_SIZE}" \
   --gradient_accumulation_steps "${MCM_GRAD_ACCUM:-16}" \
+  --dataloader_num_workers "${DATALOADER_NUM_WORKERS}" \
+  --dataloader_prefetch_factor "${DATALOADER_PREFETCH_FACTOR}" \
+  --preprocessing_num_workers "${PREPROCESSING_NUM_WORKERS}" \
   --lora_r "${LORA_R}" \
   --lora_alpha "${LORA_ALPHA}" \
   --resize_token_embeddings true \

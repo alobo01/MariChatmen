@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 
 from marichatmen.constants import TIMING_METRICS_FILE, TRAINING_METRICS_FILE
 from marichatmen.train.callbacks import JsonlLogCallback
@@ -64,7 +65,7 @@ def run(args: argparse.Namespace) -> None:
         "learning_rate": args.learning_rate,
         "max_grad_norm": args.max_grad_norm,
         "per_device_train_batch_size": args.per_device_train_batch_size,
-        "per_device_eval_batch_size": 1,
+        "per_device_eval_batch_size": args.per_device_eval_batch_size,
         "gradient_accumulation_steps": args.gradient_accumulation_steps,
         "gradient_checkpointing": args.gradient_checkpointing,
         "bf16": args.bf16,
@@ -82,7 +83,12 @@ def run(args: argparse.Namespace) -> None:
         "beta": args.beta,
         "max_completion_length": args.max_completion_length or None,
         "remove_unused_columns": False,
+        "dataloader_num_workers": args.dataloader_num_workers,
+        "dataloader_pin_memory": args.dataloader_pin_memory,
+        "dataset_num_proc": args.preprocessing_num_workers,
     }
+    if args.dataloader_num_workers > 0:
+        training_kwargs["dataloader_prefetch_factor"] = args.dataloader_prefetch_factor
     add_length_kwargs(training_kwargs, ORPOConfig, args.max_seq_length)
     training_config = config_from_supported(ORPOConfig, **training_kwargs)
     trainer = ORPOTrainer(
@@ -181,7 +187,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning_rate", type=float, default=5e-6)
     parser.add_argument("--max_grad_norm", type=float, default=1.0)
     parser.add_argument("--per_device_train_batch_size", type=int, default=1)
+    parser.add_argument(
+        "--per_device_eval_batch_size",
+        type=int,
+        default=int(os.environ.get("MCM_EVAL_BATCH_SIZE", "4")),
+    )
     parser.add_argument("--gradient_accumulation_steps", type=int, default=24)
+    parser.add_argument(
+        "--dataloader_num_workers",
+        type=int,
+        default=int(os.environ.get("MCM_DATALOADER_NUM_WORKERS", "4")),
+    )
+    parser.add_argument(
+        "--preprocessing_num_workers",
+        type=int,
+        default=int(os.environ.get("MCM_PREPROCESSING_NUM_WORKERS", "8")),
+    )
+    parser.add_argument(
+        "--dataloader_prefetch_factor",
+        type=int,
+        default=int(os.environ.get("MCM_DATALOADER_PREFETCH_FACTOR", "2")),
+    )
+    parser.add_argument("--dataloader_pin_memory", type=bool_arg, default=True)
     parser.add_argument("--lora_r", type=int, default=16)
     parser.add_argument("--lora_alpha", type=int, default=32)
     parser.add_argument("--resize_token_embeddings", type=bool_arg, default=False)
