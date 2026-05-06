@@ -117,6 +117,11 @@ Replace interim claims with final ones:
 
 - final 0.8B Qwen-Andaluh CPT/SFT/ORPO losses
 - final 0.8B MariChatmen SFT/ORPO/GRPO losses and rewards
+- ORPO reward accuracy, reward margins, log-odds ratio, and NLL by rejection class
+- GRPO reward components, entropy, KL, clipped ratio, and zero-std reward groups
+- bootstrap 95% confidence intervals over evaluation prompts
+- decoding settings for every reported generation table
+- clipped-completion rate and termination reason summary
 - final benchmark table
 - final 2B status
 - final 4B status
@@ -230,6 +235,12 @@ Before publishing:
 - [ ] Confirm whether 2B SFT reached a final adapter or only checkpoints.
 - [ ] Confirm whether 4B reached a final adapter or only CPT checkpoints.
 - [ ] Update `results.json` with final numbers.
+- [ ] Add ORPO/GRPO diagnostic metrics, not only loss curves.
+- [ ] Add bootstrap confidence intervals for MARI-AAS, MARI-PAS, MARI-TOTAL and leak rates.
+- [ ] Add decoding settings and seed next to each reported metric table.
+- [ ] Replace `not exported yet` and `not bootstrapped yet` placeholders in the draft.
+- [ ] Add validation split notes: in-distribution, held-out prompt family, human/gold, adversarial, and safety sets.
+- [ ] Add human calibration if available: MARI metric Spearman correlation with blind pairwise preferences.
 - [ ] Replace placeholder SVGs with real plots where useful.
 - [ ] Add final sample outputs for Base, SFT, ORPO, and GRPO.
 - [x] Push persona seed dataset to Hugging Face.
