@@ -60,7 +60,7 @@ uv run accelerate launch src/marichatmen/train/train_cpt.py \
   --max_seq_length "${MCM_MAX_SEQ_LENGTH:-512}" \
   --max_steps "${MCM_CPT_MAX_STEPS:-20}" \
   --learning_rate "${CPT_LR}" \
-  --per_device_train_batch_size 1 \
+  --per_device_train_batch_size "${MCM_CPT_BATCH_SIZE:-${MCM_TRAIN_BATCH_SIZE:-1}}" \
   --gradient_accumulation_steps "${MCM_GRAD_ACCUM:-16}" \
   --lora_r "${LORA_R}" \
   --lora_alpha "${LORA_ALPHA}" \
@@ -87,7 +87,7 @@ uv run accelerate launch src/marichatmen/train/train_sft.py \
   --max_seq_length "${MCM_MAX_SEQ_LENGTH:-512}" \
   --max_steps "${MCM_SFT_MAX_STEPS:-20}" \
   --learning_rate "${SFT_LR}" \
-  --per_device_train_batch_size 1 \
+  --per_device_train_batch_size "${MCM_SFT_BATCH_SIZE:-${MCM_TRAIN_BATCH_SIZE:-1}}" \
   --gradient_accumulation_steps "${MCM_GRAD_ACCUM:-16}" \
   --lora_r "${LORA_R}" \
   --lora_alpha "${LORA_ALPHA}" \
@@ -114,7 +114,7 @@ uv run accelerate launch src/marichatmen/train/train_orpo.py \
   --max_seq_length "${MCM_MAX_SEQ_LENGTH:-512}" \
   --max_steps "${MCM_ORPO_MAX_STEPS:-10}" \
   --learning_rate "${ORPO_LR}" \
-  --per_device_train_batch_size 1 \
+  --per_device_train_batch_size "${MCM_ORPO_BATCH_SIZE:-${MCM_TRAIN_BATCH_SIZE:-1}}" \
   --gradient_accumulation_steps "${MCM_GRAD_ACCUM:-16}" \
   --lora_r "${LORA_R}" \
   --lora_alpha "${LORA_ALPHA}" \
