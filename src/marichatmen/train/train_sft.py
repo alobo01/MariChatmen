@@ -69,6 +69,7 @@ def run(args: argparse.Namespace) -> None:
         "report_to": args.report_to,
         "run_name": args.run_name,
         "packing": False,
+        "assistant_only_loss": args.assistant_only_loss,
         "remove_unused_columns": False,
     }
     add_length_kwargs(training_kwargs, SFTConfig, args.max_seq_length)
@@ -118,6 +119,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bf16", type=bool_arg, default=True)
     parser.add_argument("--report_to", default="wandb")
     parser.add_argument("--run_name", default="marichatmen_sft")
+    parser.add_argument("--assistant_only_loss", type=bool_arg, default=True)
     parser.add_argument("--logging_steps", type=int, default=10)
     parser.add_argument("--eval_steps", type=int, default=50)
     parser.add_argument("--save_steps", type=int, default=100)
