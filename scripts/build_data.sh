@@ -21,7 +21,7 @@ if [[ "${MCM_ANALYZE_TOKENIZER:-1}" == "1" ]]; then
     --language spa \
     --allowed_licenses apache-2.0 MIT \
     --n_texts "${MCM_TOKENIZER_TEXTS:-2000}" \
-    --new_tokens "${MCM_NEW_TOKENS:-256}" \
+    --new_tokens "${MCM_NEW_TOKENS:-1536}" \
     --mode "${MCM_TOKENIZER_MODE:-expand}" \
     --retrain_vocab_size "${MCM_RETRAIN_VOCAB_SIZE:-0}" \
     --variant seseo \

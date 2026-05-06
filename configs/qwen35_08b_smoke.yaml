@@ -1,0 +1,11 @@
+model_name: Qwen/Qwen3.5-0.8B-Base
+stage: smoke
+purpose: systems_validation_only
+max_seq_length: 512
+tokenizer_new_tokens: 256
+cpt_tokens_target: 1000000
+sft_examples_target: 5000
+orpo_pairs_target: 1000
+lora_r: 16
+lora_alpha: 32
+quality_claim: false

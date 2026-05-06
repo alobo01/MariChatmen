@@ -3,8 +3,68 @@
 Status snapshot: 2026-05-06.
 
 The blog is **not publication-ready yet**. The draft is useful, but it still
-mixes final 0.8B results with interim 2B/4B material. Before publishing, update
-the article with the final remote artifacts and the Hugging Face model links.
+must be kept as an interim project log until the 4B Qwen-Andaluh quality run
+finishes and passes the release gates. The 0.8B results are systems validation
+only.
+
+## 0. Current Truth To Preserve
+
+- Do not present the 0.8B adapter as a quality model.
+- Do not present MariChatmen persona as ready.
+- Qwen-Andaluh and MariChatmen must remain separate in the narrative.
+- Persona training is frozen for new quality work until Qwen-Andaluh passes:
+
+```text
+MARI-AAS > 80
+Spanish leak rate < 7%
+semantic drift penalty < 0.08
+instruction following > 0.80
+45/50 manual samples clearly Andaluh
+40/50 manual samples semantically correct
+0 critical safety failures
+```
+
+- The next headline model is `Qwen/Qwen3.5-4B-Base`, not 0.8B.
+- Spanish Wikipedia `eswiki` 2026-05-01 is being integrated as CPT data and
+  must be cited as CC BY-SA 4.0/GFDL text, not plain CC BY 4.0.
+
+## 0.1 Process The Wikipedia Dump
+
+When the dump is copied to Conway, expected location:
+
+```text
+/data2/antonio/MariChatmen/data/raw/wikipedia/eswiki/20260501/eswiki-20260501-pages-articles-multistream.xml.bz2
+```
+
+Process command:
+
+```bash
+cd /home/antonio/MariChatmen
+UV_PROJECT_ENVIRONMENT=/data2/antonio/MariChatmen/.venv \
+UV_CACHE_DIR=/data2/antonio/MariChatmen/.uv_cache \
+MCM_ARTIFACT_ROOT=/data2/antonio/MariChatmen \
+uv run python -m marichatmen.data.build_wikipedia_cpt \
+  --dump_file /data2/antonio/MariChatmen/data/raw/wikipedia/eswiki/20260501/eswiki-20260501-pages-articles-multistream.xml.bz2 \
+  --out_dir /data2/antonio/MariChatmen/data/processed/cpt_wikipedia_eswiki_20260501 \
+  --n_train 100000 \
+  --n_valid 5000 \
+  --n_probe 1000 \
+  --andaluh_ratio 0.9
+```
+
+Check that this exists before training:
+
+```text
+/data2/antonio/MariChatmen/data/processed/cpt_wikipedia_eswiki_20260501/manifest.json
+```
+
+Citation to use:
+
+```text
+Spanish Wikipedia contributors, "eswiki dump 20260501",
+Wikimedia Dumps, https://dumps.wikimedia.org/eswiki/20260501/.
+Text reused under CC BY-SA 4.0 and GFDL; transformed to Andaluh EPA for CPT.
+```
 
 ## 1. Download The Latest Conway Results
 
@@ -81,7 +141,7 @@ Confirmed completed adapter directories:
 /data2/antonio/MariChatmen/outputs/qwen_andaluh_2b_cpt_overnight_smart_base_long_20260505_233037/final_adapter
 ```
 
-Only partial checkpoints were found for these:
+Historical/interim partial checkpoints were found for these:
 
 ```text
 /data2/antonio/MariChatmen/outputs/qwen_andaluh_2b_sft_overnight_smart_base_long_20260505_233037/checkpoint-550
@@ -90,9 +150,9 @@ Only partial checkpoints were found for these:
 /data2/antonio/MariChatmen/outputs/qwen_andaluh_4b_cpt_overnight_smart_base_long_20260505_233037/checkpoint-100
 ```
 
-Before publication, decide whether the 2B SFT and 4B CPT results are final
-enough to report. If they are not final, keep them out of the headline results
-and describe them as ongoing or omit them entirely.
+Before publication, do not treat the old 2B SFT and old 4B CPT results as
+headline results. The new target is a quality 4B-Base run with expanded
+tokenizer and longer training.
 
 Inspect run logs here:
 
@@ -115,19 +175,23 @@ blog/marichatmen-blog-repo/assets/
 
 Replace interim claims with final ones:
 
-- final 0.8B Qwen-Andaluh CPT/SFT/ORPO losses
-- final 0.8B MariChatmen SFT/ORPO/GRPO losses and rewards
+- final 4B Qwen-Andaluh CPT/SFT/ORPO losses
+- final 4B Qwen-Andaluh MARI-AAS and Spanish leak rate
+- Wikipedia CPT token count and manifest path
 - ORPO reward accuracy, reward margins, log-odds ratio, and NLL by rejection class
-- GRPO reward components, entropy, KL, clipped ratio, and zero-std reward groups
+- persona GRPO reward components only if persona is resumed after gates pass
 - bootstrap 95% confidence intervals over evaluation prompts
 - decoding settings for every reported generation table
 - clipped-completion rate and termination reason summary
 - final benchmark table
-- final 2B status
-- final 4B status
+- final 2B baseline status, if useful
+- final 4B quality status
 - GPU utilisation plots
 - best and worst qualitative examples
 - clear statement of whether each model is release-ready
+
+Do not publish a MariChatmen persona article until the base Qwen-Andaluh gates
+have actually passed.
 
 Use the downloaded plots from:
 

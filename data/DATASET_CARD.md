@@ -25,10 +25,23 @@ The persona file is used to generate:
 
 ## Non-Persona Training Sources
 
-The primary public SFT source for Qwen-Andalûh is:
+The current smoke/source path uses:
 
 - `VillanovaAI/villanova-sft-2603`
   <https://huggingface.co/datasets/VillanovaAI/villanova-sft-2603>
+
+The next quality Qwen-Andaluh path adds larger non-persona CPT data. Spanish
+Wikipedia is being downloaded from the exact Wikimedia dump below:
+
+- Spanish Wikipedia eswiki dump, 2026-05-01:
+  <https://dumps.wikimedia.org/eswiki/20260501/>
+- Article dump file:
+  `eswiki-20260501-pages-articles-multistream.xml.bz2`
+
+Wikipedia text must be cited as Spanish Wikipedia contributors via Wikimedia
+Dumps. Treat text reuse as CC BY-SA 4.0/GFDL, not plain CC BY 4.0. Derived CPT
+rows must include the dump URL, article title when available, source file, and
+the transformation `andaluh_epa_seseo`.
 
 Additional Spanish sources evaluated for future or optional builds:
 
@@ -59,6 +72,15 @@ Derived non-persona rows are built from Spanish chat-style source data with:
 - SFT rows written in TRL conversational `messages` format;
 - ORPO rows written as conversational `prompt`, `chosen`, and `rejected`.
 
+Wikipedia CPT rows are built as plain causal-LM `{"text": ...}` rows with:
+
+- article namespace filtering;
+- redirect skipping;
+- rough wikitext cleanup;
+- word-count filtering;
+- 90% Andaluh-transformed text and 10% original Spanish retention by default;
+- Spanish and Andaluh validation probes for perplexity tracking.
+
 Protected spans include URLs, emails, code blocks, inline code, shell commands,
 package names, model IDs, paths, units, and likely technical proper names.
 
@@ -66,5 +88,9 @@ Default allowed source licences for public data builds:
 
 - Apache-2.0
 - MIT
+
+CC BY-SA 4.0/GFDL Wikipedia-derived CPT rows are tracked separately and should
+not be mixed into a public non-share-alike dataset release without preserving
+attribution and share-alike obligations.
 
 Use `scripts/build_data.sh` to recreate processed base and persona data.

@@ -1,14 +1,21 @@
 # MariChatmen
 
 MariChatmen is a reproducible training pipeline for Andaluh EPA post-training.
-The first model is `Qwen-Andaluh`: a non-persona assistant trained with the
-system prompt `Eres un asistente`, able to read Spanish or Andaluh and answer
-in Andaluh. MariChatmen is then trained later from Qwen-Andaluh as the persona
-model.
+The project is now staged deliberately:
+
+```text
+Qwen-Andaluh first, then MariChatmen.
+```
+
+`Qwen-Andaluh` is the non-persona assistant. It uses the neutral system prompt
+`Eres un asistente`, reads Spanish or Andaluh, and should answer in Andaluh.
+`MariChatmen` is trained later from a Qwen-Andaluh checkpoint after the accent
+and Spanish-leak gates pass.
 
 The project builds:
 
 - license-filtered Spanish SFT data from `VillanovaAI/villanova-sft-2603`
+- optional Spanish Wikipedia CPT data from the eswiki 2026-05-01 dump
 - fragile-span-safe Andaluh EPA conversion
 - SFT, ORPO, and optional GRPO QLoRA training entrypoints
 - local GPU and timing logs
@@ -43,8 +50,9 @@ bash scripts/run_tests.sh
 
 ## Qwen-Andaluh Base Run
 
-This is the non-persona base path. It uses the plain system prompt
-`Eres un asistente`, reads Spanish or Andaluh, and always answers in Andaluh.
+This is the non-persona base path. The 0.8B run is only for systems validation.
+The next quality target is `Qwen/Qwen3.5-4B-Base` with a Qwen-compatible
+expanded tokenizer, longer CPT, longer SFT, and stricter ORPO.
 
 ```bash
 uv run python scripts/download_datasets.py --only villanova
@@ -52,10 +60,39 @@ bash scripts/build_data.sh
 bash scripts/train_qwen_andaluh_local.sh
 ```
 
+### Spanish Wikipedia CPT
+
+The optional Wikipedia CPT source is the Spanish Wikipedia dump dated
+2026-05-01:
+
+```text
+https://dumps.wikimedia.org/eswiki/20260501/
+```
+
+Expected local/Conway location:
+
+```text
+/data2/antonio/MariChatmen/data/raw/wikipedia/eswiki/20260501/eswiki-20260501-pages-articles-multistream.xml.bz2
+```
+
+Process it with:
+
+```bash
+uv run python -m marichatmen.data.build_wikipedia_cpt \
+  --dump_file /data2/antonio/MariChatmen/data/raw/wikipedia/eswiki/20260501/eswiki-20260501-pages-articles-multistream.xml.bz2 \
+  --out_dir /data2/antonio/MariChatmen/data/processed/cpt_wikipedia_eswiki_20260501 \
+  --n_train 100000 \
+  --n_valid 5000 \
+  --n_probe 1000
+```
+
+Wikipedia-derived rows are tracked separately as CC BY-SA 4.0/GFDL text with
+article/source metadata. Do not describe them as plain CC BY 4.0.
+
 ## MariChatmen Persona Run
 
-After Qwen-Andaluh exists, train the fictional persona from the persona seed
-file in `data/persona/`. The same seed dataset is published on Hugging Face as
+After Qwen-Andaluh passes the accent gates, train the fictional persona from
+the persona seed file in `data/persona/`. The same seed dataset is published on Hugging Face as
 [`MariChatmen/MariChatmen-Persona`](https://huggingface.co/datasets/MariChatmen/MariChatmen-Persona)
 under CC BY 4.0.
 
@@ -66,7 +103,8 @@ bash scripts/train_marichatmen_local.sh
 ## Conway
 
 For Conway, keep code in `/home/antonio/MariChatmen` and all large artifacts in
-`/data2/antonio/MariChatmen`. The helper enforces GPU 0 and 12 CPU threads:
+`/data2/antonio/MariChatmen`. The helper enforces GPU 0 and 12 CPU threads.
+By default it now runs the 4B-Base quality path, one model on GPU 0:
 
 ```bash
 bash scripts/conway_run.sh

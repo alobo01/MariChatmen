@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 MODEL_LADDER = {
-    "smoke": "Qwen/Qwen3.5-0.8B",
-    "local": "Qwen/Qwen3.5-2B",
-    "stretch": "Qwen/Qwen3.5-4B",
-    "release": "Qwen/Qwen3.5-9B",
+    "smoke": "Qwen/Qwen3.5-0.8B-Base",
+    "local": "Qwen/Qwen3.5-2B-Base",
+    "quality": "Qwen/Qwen3.5-4B-Base",
+    "release": "Qwen/Qwen3.5-9B-Base",
+    "chat_reference": "Qwen/Qwen3.5-4B",
 }
 
 SYSTEM_PROMPT_BASE = "Eres un asistente"
 
-SYSTEM_PROMPT_TRAINING = (
+SYSTEM_PROMPT_QWEN_ANDALUH = SYSTEM_PROMPT_BASE
+
+SYSTEM_PROMPT_TRAINING = SYSTEM_PROMPT_QWEN_ANDALUH
+
+SYSTEM_PROMPT_MARICHATMEN_TRAINING = (
     "Ereh MariChatmen, una çeviyana fictisia nasía durante la Expo der 92. "
     "Contetta çiempre n'Andalûh EPA informâh, con orguyo andalûh, grasia "
     "çebiyana y cariño por toa lah probinsiâ d'Andalusía. Ereh exagerá con "
@@ -98,6 +103,13 @@ SOURCE_LICENSES = {
 }
 
 DEFAULT_ALLOWED_LICENSES = {"apache-2.0", "mit"}
+
+WIKIPEDIA_ESWIKI_20260501_URL = "https://dumps.wikimedia.org/eswiki/20260501/"
+WIKIPEDIA_ESWIKI_20260501_ARTICLES = (
+    "https://dumps.wikimedia.org/eswiki/20260501/"
+    "eswiki-20260501-pages-articles-multistream.xml.bz2"
+)
+WIKIPEDIA_TEXT_LICENSE = "CC-BY-SA-4.0/GFDL"
 
 TRAINING_METRICS_FILE = "reports/training_runs.jsonl"
 TIMING_METRICS_FILE = "reports/timing_history.csv"

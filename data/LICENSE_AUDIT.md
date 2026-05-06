@@ -38,6 +38,13 @@
     "ODC-BY",
     "AFL-3.0",
     "unknown"
-  ]
+  ],
+  "wikipedia_eswiki_20260501": {
+    "source_url": "https://dumps.wikimedia.org/eswiki/20260501/",
+    "articles_file": "eswiki-20260501-pages-articles-multistream.xml.bz2",
+    "license": "CC-BY-SA-4.0/GFDL",
+    "use": "optional CPT only, with attribution and share-alike tracking",
+    "default_public_mix": false
+  }
 }
 ```
