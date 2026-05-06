@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from marichatmen.tokenizer_templates import ensure_text_training_chat_template
+
 THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 ROLE_LEAK_RE = re.compile(
     r"(?i)(?:<\|im_start\|>\s*)?(?:(?<=[.!?])\s+|\n|\r|\s{2,})"
@@ -49,6 +51,7 @@ def load_tokenizer(model_name: str, tokenizer_name: str | None = None):
     from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name or model_name, trust_remote_code=True)
+    ensure_text_training_chat_template(tokenizer)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     return tokenizer

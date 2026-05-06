@@ -10,6 +10,7 @@ from typing import Any
 
 from marichatmen.constants import TRAINING_METRICS_FILE
 from marichatmen.io import append_jsonl
+from marichatmen.tokenizer_templates import ensure_text_training_chat_template
 
 LORA_TARGET_MODULES = [
     "q_proj",
@@ -95,6 +96,7 @@ def load_model_and_tokenizer(
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name or model_name, trust_remote_code=True)
+    ensure_text_training_chat_template(tokenizer)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(

@@ -17,6 +17,7 @@ from marichatmen.data.license_filter import normalize_license
 from marichatmen.data.load_villanova import iter_villanova_examples
 from marichatmen.data.transliterate_andaluh import strip_thinking, to_andaluh
 from marichatmen.io import iter_jsonl
+from marichatmen.tokenizer_templates import ensure_text_training_chat_template
 
 WORD_RE = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñÇçÂÊÎÔÛâêîôû]{2,32}")
 ANDALUH_MARKER_RE = re.compile(r"[ÇçÂÊÎÔÛâêîôû]")
@@ -301,6 +302,7 @@ def run(args: argparse.Namespace) -> None:
     from transformers import AutoTokenizer
 
     base_tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
+    ensure_text_training_chat_template(base_tokenizer)
     pairs = _iter_text_pairs(args)
     if not pairs:
         raise RuntimeError("No Spanish/Andaluh text pairs were built for tokenizer analysis.")
@@ -310,6 +312,7 @@ def run(args: argparse.Namespace) -> None:
     candidates = [row["token"] for row in candidate_stats]
     if args.mode == "expand":
         adapted_tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
+        ensure_text_training_chat_template(adapted_tokenizer)
         added_count = adapted_tokenizer.add_tokens(candidates)
         vocab_delta = added_count
     else:
@@ -318,6 +321,7 @@ def run(args: argparse.Namespace) -> None:
             andaluh_texts,
             vocab_size=retrain_vocab_size,
         )
+        ensure_text_training_chat_template(adapted_tokenizer)
         added_count = 0
         vocab_delta = len(adapted_tokenizer) - len(base_tokenizer)
     save_dir = Path(args.save_tokenizer_dir)
