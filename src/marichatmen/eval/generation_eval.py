@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any
 
 from marichatmen.tokenizer_templates import ensure_text_training_chat_template
@@ -12,6 +13,7 @@ ROLE_LEAK_RE = re.compile(
     r"(?i)(?:<\|im_start\|>\s*)?(?:(?<=[.!?])\s+|\n|\r|\s{2,})"
     r"(?:user|assistant|system)\s*:?\s"
 )
+_BAD_GENERATION_TOKEN_CACHE: dict[int, list[int]] = {}
 
 
 def strip_think_blocks(text: str) -> str:
@@ -93,6 +95,58 @@ def load_causal_model(
     return model
 
 
+def _has_unsafe_generation_char(text: str) -> bool:
+    for char in text:
+        codepoint = ord(char)
+        if char == "\ufffd":
+            return True
+        if 0x3000 <= codepoint <= 0x303F:  # CJK symbols/punctuation, e.g. 〔 〕
+            return True
+        if 0xFF00 <= codepoint <= 0xFFEF:  # halfwidth/fullwidth compatibility forms
+            return True
+        if 0x200B <= codepoint <= 0x200F:  # zero-width/bidi marks
+            return True
+        if 0x202A <= codepoint <= 0x202E:  # bidi overrides
+            return True
+        if 0xE000 <= codepoint <= 0xF8FF:  # private use
+            return True
+        category = unicodedata.category(char)
+        if category.startswith(("L", "M")) and codepoint >= 128:
+            name = unicodedata.name(char, "")
+            if "LATIN" not in name and "COMBINING" not in name:
+                return True
+    return False
+
+
+def generation_suppress_token_ids(tokenizer: Any) -> list[int]:
+    """Return token ids unsafe for Spanish/Andaluh text generation."""
+
+    cache_key = id(tokenizer)
+    if cache_key in _BAD_GENERATION_TOKEN_CACHE:
+        return _BAD_GENERATION_TOKEN_CACHE[cache_key]
+
+    bad_ids: list[int] = []
+    vocab = tokenizer.get_vocab()
+    for token_id in vocab.values():
+        decoded = tokenizer.decode([token_id], skip_special_tokens=False)
+        if _has_unsafe_generation_char(decoded):
+            bad_ids.append(token_id)
+    _BAD_GENERATION_TOKEN_CACHE[cache_key] = bad_ids
+    return bad_ids
+
+
+def replacement_bad_words_ids(tokenizer: Any) -> list[list[int]]:
+    """Backward-compatible name for generation bad-token filtering."""
+
+    return [[token_id] for token_id in generation_suppress_token_ids(tokenizer)]
+
+
+def generation_bad_words_ids(tokenizer: Any) -> list[list[int]]:
+    """Backward-compatible alias for older call sites."""
+
+    return replacement_bad_words_ids(tokenizer)
+
+
 def generate_response(
     model: Any,
     tokenizer: Any,
@@ -103,6 +157,7 @@ def generate_response(
     top_p: float = 0.9,
     top_k: int = 20,
     disable_thinking: bool = True,
+    suppress_replacement_tokens: bool = True,
 ) -> str:
     import torch
 
@@ -114,6 +169,11 @@ def generate_response(
     )
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     with torch.no_grad():
+        suppress_tokens = (
+            generation_suppress_token_ids(tokenizer)
+            if suppress_replacement_tokens
+            else None
+        )
         output_ids = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
@@ -121,6 +181,7 @@ def generate_response(
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
+            suppress_tokens=suppress_tokens,
             pad_token_id=tokenizer.eos_token_id,
         )
     new_tokens = output_ids[0][inputs["input_ids"].shape[-1] :]

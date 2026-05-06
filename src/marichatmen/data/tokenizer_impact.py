@@ -138,6 +138,8 @@ def _candidate_token_stats(tokenizer: Any, andaluh_texts: list[str], limit: int)
 
     scored: list[tuple[int, int, str, int]] = []
     for word, freq in counts.items():
+        if not _is_valid_added_token(word):
+            continue
         if word in vocab or word.isdigit():
             continue
         if not _looks_andaluh(word):
@@ -161,6 +163,14 @@ def _candidate_token_stats(tokenizer: Any, andaluh_texts: list[str], limit: int)
 
 def _candidate_tokens(tokenizer: Any, andaluh_texts: list[str], limit: int) -> list[str]:
     return [row["token"] for row in _candidate_token_stats(tokenizer, andaluh_texts, limit)]
+
+
+def _is_valid_added_token(token: str) -> bool:
+    if "\ufffd" in token:
+        return False
+    if any((ord(char) < 32 and char not in {"\t", "\n"}) for char in token):
+        return False
+    return True
 
 
 def _looks_andaluh(word: str) -> bool:
