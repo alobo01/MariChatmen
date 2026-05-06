@@ -135,6 +135,16 @@ downloaded and checked.
 
 ## 4. Upload Hugging Face Models And Add Links
 
+The persona seed dataset has been uploaded:
+
+```text
+MariChatmen Persona dataset:
+https://huggingface.co/datasets/alobos/MariChatmen-Persona
+
+Upload commit:
+https://huggingface.co/datasets/alobos/MariChatmen-Persona/commit/5abbb0a1fc6e857d6d99924440cc36b436c36a1d
+```
+
 I did **not** find any uploaded public Hugging Face model links recorded in the
 repo or via public search for `MariChatmen` / `Qwen-Andaluh` on 2026-05-06.
 So the links below are placeholders until the adapters are actually pushed.
@@ -216,6 +226,7 @@ Before publishing:
 - [ ] Update `results.json` with final numbers.
 - [ ] Replace placeholder SVGs with real plots where useful.
 - [ ] Add final sample outputs for Base, SFT, ORPO, and GRPO.
+- [x] Push persona seed dataset to Hugging Face.
 - [ ] Push adapter models to Hugging Face.
 - [ ] Replace all `<namespace>` Hugging Face placeholders with real links.
 - [ ] Add model cards and licence notes to every HF repo.
