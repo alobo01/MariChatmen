@@ -1,0 +1,59 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+.python-version
+
+# Python caches and tooling
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and package/build output
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+
+# Hugging Face / ML caches
+.hf_cache/
+.cache/
+.uv_cache/
+wandb/
+.wandb/
+
+# Local datasets and generated training data
+data/raw/*
+!data/raw/README.md
+data/interim/
+data/private/
+data/processed/*
+!data/processed/README.md
+!data/processed/DATASET_CARD.md
+!data/processed/LICENSE_AUDIT.md
+
+# Model/tokenizer artifacts
+outputs/*
+!outputs/README.md
+
+# Experiment reports and logs
+reports/*
+!reports/README.md
+*.log
+*.pid
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Generated blog export repo
+blog/marichatmen-blog-repo/

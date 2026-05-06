@@ -1,0 +1,8 @@
+eval_file: data/processed/mari_bench_v1.jsonl
+metrics_csv: reports/eval_history.csv
+max_new_tokens: 192
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+presence_penalty: 1.5
+disable_thinking: true

@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "MariChatmen"
+message: "If you use this project, please cite it using this metadata."
+type: software
+authors:
+  - family-names: "Lobo-Santos"
+    given-names: "Antonio"
+date-released: "2026-05-05"
+version: "0.1.0"
+license: "Apache-2.0"

@@ -1,0 +1,16 @@
+model_name: Qwen/Qwen3.5-2B
+stage: orpo
+sft_adapter: outputs/qwen35_2b_sft/final_adapter
+train_file: data/processed/orpo_train.jsonl
+valid_file: data/processed/orpo_valid.jsonl
+output_dir: outputs/qwen35_2b_orpo
+max_seq_length: 512
+num_train_epochs: 1
+learning_rate: 0.000005
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 24
+lora_r: 16
+lora_alpha: 32
+beta: 0.1
+gradient_checkpointing: true
+bf16: true
