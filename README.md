@@ -70,12 +70,13 @@ marichatmen train persona --config configs/smoke/qwen35_08b_sft_smoke.yaml --all
 Config precedence is: CLI values, then `MCM_*` environment variables, then YAML
 config defaults. Use `--set key=value` for any supported `MCM_*` option.
 
-## Publication Rules
+## Author
 
-- Do not publish raw copyrighted transcripts or TV dialogue.
-- Keep generated data, model outputs, reports, and logs out of git.
-- Publish LoRA adapters before any merged model.
-- Keep Wikipedia-derived CPT rows separate with CC BY-SA 4.0/GFDL attribution.
+MariChatmen was designed, built, and released by **Antonio Lobo-Santos**.
+
+The project combines the training pipeline, data builders, evaluation gates,
+demo scaffolding, prompt resources, and public release structure needed to
+adapt Qwen models toward Andalûh EPA and the MariChatmen persona.
 
 ## License
 
