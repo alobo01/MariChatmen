@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from marichatmen.constants import ARTIFACT_ROOT
 from marichatmen.eval.generation_eval import generate_response, load_causal_model, load_tokenizer
 from marichatmen.eval.mari_pas import province_diversity_entropy, total_score_dict
 from marichatmen.io import append_csv_row, read_jsonl, write_jsonl
@@ -22,12 +23,18 @@ def _prompt_from_row(row: dict[str, Any]) -> list[dict[str, str]]:
 
 def run(args: argparse.Namespace) -> None:
     rows = read_jsonl(args.eval_file)
-    tokenizer = load_tokenizer(args.model_name, args.tokenizer_name or None)
+    tokenizer = load_tokenizer(
+        args.model_name,
+        args.tokenizer_name or None,
+        args.adapter_path or None,
+    )
     model = load_causal_model(
         args.model_name,
         args.adapter_path or None,
         load_in_4bit=not args.no_4bit,
         tokenizer_len=len(tokenizer),
+        tokenizer=tokenizer,
+        tokenizer_name=args.tokenizer_name or args.model_name,
     )
 
     samples: list[dict[str, Any]] = []
@@ -133,10 +140,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model_name", required=True)
     parser.add_argument("--tokenizer_name", default="")
     parser.add_argument("--adapter_path", default="")
-    parser.add_argument("--eval_file", default="data/processed/mari_bench_v1.jsonl")
+    parser.add_argument("--eval_file", default=str(ARTIFACT_ROOT / "data/processed/mari_bench_v1.jsonl"))
     parser.add_argument("--run_name", required=True)
     parser.add_argument("--output_jsonl", required=True)
-    parser.add_argument("--metrics_csv", default="reports/eval_history.csv")
+    parser.add_argument("--metrics_csv", default=str(ARTIFACT_ROOT / "reports/eval_history.csv"))
     parser.add_argument("--max_new_tokens", type=int, default=192)
     parser.add_argument("--temperature", type=float, default=0.7)
     parser.add_argument("--top_p", type=float, default=0.9)

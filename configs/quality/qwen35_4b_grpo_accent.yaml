@@ -1,0 +1,14 @@
+model_name: Qwen/Qwen3.5-4B
+stage: grpo
+sft_or_orpo_adapter: .artifacts/outputs/qwen35_4b_orpo/final_adapter
+prompts_file: .artifacts/data/processed/base/grpo_prompts.jsonl
+output_dir: .artifacts/outputs/qwen35_4b_grpo_mari_aas
+max_prompt_length: 384
+max_completion_length: 192
+num_generations: 4
+learning_rate: 0.000001
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
+lora_r: 16
+lora_alpha: 32
+bf16: true

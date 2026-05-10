@@ -7,7 +7,7 @@ import gc
 from pathlib import Path
 from typing import Any
 
-from marichatmen.constants import SYSTEM_PROMPT_BASE
+from marichatmen.constants import ARTIFACT_ROOT, SYSTEM_PROMPT_BASE
 from marichatmen.eval.generation_eval import generate_response, load_causal_model, load_tokenizer
 from marichatmen.eval.mari_aas import score_dict
 from marichatmen.io import write_jsonl
@@ -51,6 +51,12 @@ def _release_model(model: Any) -> None:
         pass
 
 
+def _tokenizer_for_adapter(adapter_path: str, fallback: str) -> str:
+    if adapter_path and (Path(adapter_path) / "tokenizer_config.json").exists():
+        return adapter_path
+    return fallback
+
+
 def _generate(
     *,
     model_name: str,
@@ -66,6 +72,8 @@ def _generate(
         adapter_path or None,
         load_in_4bit=not no_4bit,
         tokenizer_len=len(tokenizer),
+        tokenizer=tokenizer,
+        tokenizer_name=tokenizer_name or model_name,
     )
     answers = []
     for prompt in prompts:
@@ -95,9 +103,9 @@ def run(args: argparse.Namespace) -> None:
     }
     stage_tokenizers = {
         "original": "",
-        "cpt": args.tokenizer_name,
-        "sft": args.tokenizer_name,
-        "orpo": args.tokenizer_name,
+        "cpt": _tokenizer_for_adapter(args.cpt_adapter, args.tokenizer_name),
+        "sft": _tokenizer_for_adapter(args.sft_adapter, args.tokenizer_name),
+        "orpo": _tokenizer_for_adapter(args.orpo_adapter, args.tokenizer_name),
     }
 
     generated: dict[str, list[str]] = {}
@@ -157,13 +165,25 @@ def _write_markdown(path: Path, rows: list[dict[str, Any]]) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", default="Qwen/Qwen3.5-0.8B")
-    parser.add_argument("--tokenizer_name", default="outputs/tokenizers/qwen35_08b_andaluh")
-    parser.add_argument("--cpt_adapter", default="outputs/qwen_andaluh_08b_cpt/final_adapter")
-    parser.add_argument("--sft_adapter", default="outputs/qwen_andaluh_08b_sft/final_adapter")
+    parser.add_argument(
+        "--tokenizer_name",
+        default=str(ARTIFACT_ROOT / "outputs/tokenizers/qwen35_08b_andaluh"),
+    )
+    parser.add_argument(
+        "--cpt_adapter",
+        default=str(ARTIFACT_ROOT / "outputs/qwen_andaluh_08b_cpt/final_adapter"),
+    )
+    parser.add_argument("--sft_adapter", default="")
     parser.add_argument("--orpo_adapter", default="")
     parser.add_argument("--prompts_file", default="")
-    parser.add_argument("--output_jsonl", default="reports/samples/qwen_andaluh_stage_examples.jsonl")
-    parser.add_argument("--output_md", default="showcase/qwen_andaluh_stage_examples.md")
+    parser.add_argument(
+        "--output_jsonl",
+        default=str(ARTIFACT_ROOT / "reports/samples/qwen_andaluh_stage_examples.jsonl"),
+    )
+    parser.add_argument(
+        "--output_md",
+        default=str(ARTIFACT_ROOT / "showcase/qwen_andaluh_stage_examples.md"),
+    )
     parser.add_argument("--max_new_tokens", type=int, default=192)
     parser.add_argument("--no_4bit", action="store_true")
     return parser.parse_args()

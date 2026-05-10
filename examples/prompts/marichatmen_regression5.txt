@@ -1,0 +1,5 @@
+Preséntate brevemente.
+Explícame qué es el overfitting.
+Dime cómo instalar transformers con uv.
+Háblame de SFDK sin citar letras.
+Dame una receta sencilla de salmorejo.

@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import argparse
 import os
+from pathlib import Path
 
 from marichatmen.constants import TIMING_METRICS_FILE, TRAINING_METRICS_FILE
 from marichatmen.train.callbacks import JsonlLogCallback
 from marichatmen.train.common import (
     add_early_stopping,
     add_length_kwargs,
+    assert_adapter_tokenizer_compatible,
     bool_arg,
     config_from_supported,
     acquire_output_dir_lock_or_skip,
@@ -21,6 +23,7 @@ from marichatmen.train.common import (
     save_training_record,
     write_accelerate_note,
 )
+from marichatmen.train.generation_probes import NeutralGenerationProbeCallback
 from marichatmen.train.timing import timed_stage
 
 
@@ -49,12 +52,25 @@ def run(args: argparse.Namespace) -> None:
         )
     peft_config = None
     if args.sft_adapter:
+        assert_adapter_tokenizer_compatible(
+            args.sft_adapter,
+            tokenizer,
+            tokenizer_name=args.tokenizer_name or args.model_name,
+            model_name=args.model_name,
+        )
         model = PeftModel.from_pretrained(model, args.sft_adapter, is_trainable=True)
+        if args.freeze_sft_adapter_token_deltas:
+            frozen = 0
+            for name, parameter in model.named_parameters():
+                if "token_adapter" in name or "trainable_tokens_delta" in name:
+                    parameter.requires_grad = False
+                    frozen += parameter.numel()
+            print(f"Froze {frozen:,} SFT-adapter token-delta parameters for ORPO")
     else:
         peft_config = make_lora_config(
             args.lora_r,
             args.lora_alpha,
-            0.05,
+            args.lora_dropout,
             train_embeddings=args.train_embeddings,
             trainable_token_indices=new_token_indices(tokenizer) if args.train_embeddings else None,
         )
@@ -63,6 +79,9 @@ def run(args: argparse.Namespace) -> None:
         "num_train_epochs": args.num_train_epochs,
         "max_steps": args.max_steps,
         "learning_rate": args.learning_rate,
+        "warmup_ratio": args.warmup_ratio,
+        "lr_scheduler_type": args.lr_scheduler_type,
+        "weight_decay": args.weight_decay,
         "max_grad_norm": args.max_grad_norm,
         "per_device_train_batch_size": args.per_device_train_batch_size,
         "per_device_eval_batch_size": args.per_device_eval_batch_size,
@@ -81,6 +100,7 @@ def run(args: argparse.Namespace) -> None:
         "report_to": args.report_to,
         "run_name": args.run_name,
         "beta": args.beta,
+        "max_prompt_length": args.max_prompt_tokens,
         "max_completion_length": args.max_completion_length or None,
         "remove_unused_columns": False,
         "dataloader_num_workers": args.dataloader_num_workers,
@@ -100,6 +120,20 @@ def run(args: argparse.Namespace) -> None:
         peft_config=peft_config,
     )
     trainer.add_callback(JsonlLogCallback(TRAINING_METRICS_FILE, args.run_name, "orpo"))
+    if args.generation_probe_file:
+        trainer.add_callback(
+            NeutralGenerationProbeCallback(
+                run_name=args.run_name,
+                stage="orpo",
+                tokenizer=tokenizer,
+                prompts_file=args.generation_probe_file,
+                output_jsonl=args.generation_probe_output
+                or str(Path(args.output_dir) / "generation_probes.jsonl"),
+                limit=args.generation_probe_limit,
+                max_new_tokens=args.generation_probe_max_new_tokens,
+                system_prompt=args.generation_probe_system_prompt,
+            )
+        )
     add_early_stopping(
         trainer,
         patience=args.early_stopping_patience,
@@ -108,7 +142,7 @@ def run(args: argparse.Namespace) -> None:
     write_accelerate_note(args.output_dir)
     with timed_stage("orpo_train", TIMING_METRICS_FILE, {"run_id": args.run_name, "model": args.model_name}):
         trainer.train()
-    final_dir = save_adapter(trainer, args.output_dir)
+    final_dir = save_adapter(trainer, args.output_dir, tokenizer)
     save_training_record(args.run_name, "orpo", args.output_dir, trainer)
     print(f"Saved final adapter to {final_dir}")
 
@@ -178,6 +212,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model_name", required=True)
     parser.add_argument("--tokenizer_name", default="")
     parser.add_argument("--sft_adapter", default="")
+    parser.add_argument("--freeze_sft_adapter_token_deltas", type=bool_arg, default=False)
     parser.add_argument("--train_file", required=True)
     parser.add_argument("--valid_file", required=True)
     parser.add_argument("--output_dir", required=True)
@@ -185,6 +220,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num_train_epochs", type=float, default=1)
     parser.add_argument("--max_steps", type=int, default=-1)
     parser.add_argument("--learning_rate", type=float, default=5e-6)
+    parser.add_argument("--warmup_ratio", type=float, default=0.03)
+    parser.add_argument("--lr_scheduler_type", default="cosine")
+    parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--max_grad_norm", type=float, default=1.0)
     parser.add_argument("--per_device_train_batch_size", type=int, default=1)
     parser.add_argument(
@@ -211,6 +249,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataloader_pin_memory", type=bool_arg, default=True)
     parser.add_argument("--lora_r", type=int, default=16)
     parser.add_argument("--lora_alpha", type=int, default=32)
+    parser.add_argument("--lora_dropout", type=float, default=0.05)
     parser.add_argument("--resize_token_embeddings", type=bool_arg, default=False)
     parser.add_argument("--train_embeddings", type=bool_arg, default=False)
     parser.add_argument("--beta", type=float, default=0.1)
@@ -228,6 +267,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--load_best_model_at_end", type=bool_arg, default=False)
     parser.add_argument("--early_stopping_patience", type=int, default=0)
     parser.add_argument("--early_stopping_threshold", type=float, default=0.0)
+    parser.add_argument("--generation_probe_file", default="")
+    parser.add_argument("--generation_probe_output", default="")
+    parser.add_argument("--generation_probe_limit", type=int, default=5)
+    parser.add_argument("--generation_probe_max_new_tokens", type=int, default=128)
+    parser.add_argument("--generation_probe_system_prompt", default="Eres un asistente")
     return parser.parse_args()
 
 

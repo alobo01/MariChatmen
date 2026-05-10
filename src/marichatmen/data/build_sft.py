@@ -11,13 +11,16 @@ from typing import Any
 
 from marichatmen.constants import (
     ALLOWED_CATEGORIES,
+    ARTIFACT_ROOT,
     DEFAULT_ALLOWED_LICENSES,
     SOURCE_LICENSES,
+    SYSTEM_PROMPT_BASE,
     SYSTEM_PROMPT_TRAINING,
 )
 from marichatmen.data.license_filter import normalize_license, source_license
 from marichatmen.data.load_villanova import iter_local_examples, iter_villanova_examples
 from marichatmen.data.transliterate_andaluh import strip_thinking, to_andaluh
+from marichatmen.eval.quality_metrics import has_reasoning_preamble
 from marichatmen.io import write_jsonl
 
 
@@ -30,6 +33,10 @@ def _normalize_messages(
     row: dict[str, Any],
     *,
     system_prompt: str,
+    neutral_system_prompt: str,
+    explicit_system_prompt: str,
+    neutral_system_ratio: float,
+    empty_system_ratio: float,
     user_andaluh_ratio: float,
     assistant_andaluh_ratio: float,
     variant: str,
@@ -41,7 +48,23 @@ def _normalize_messages(
     if not isinstance(raw_messages, list):
         return None
 
-    messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+    rng = random.Random(seed + row_index * 15485863)
+    draw = rng.random()
+    if draw < empty_system_ratio:
+        system_mode = "empty"
+        selected_system_prompt = ""
+        messages: list[dict[str, str]] = []
+    elif draw < empty_system_ratio + neutral_system_ratio:
+        system_mode = "neutral"
+        selected_system_prompt = neutral_system_prompt
+        messages = [{"role": "system", "content": selected_system_prompt}]
+    else:
+        system_mode = "explicit_andaluh"
+        selected_system_prompt = explicit_system_prompt or system_prompt
+        messages = [{"role": "system", "content": selected_system_prompt}]
+
+    user_turns = 0
+    user_andaluh_turns = 0
     for turn_index, message in enumerate(raw_messages):
         role = message.get("role") if isinstance(message, dict) else None
         content = message.get("content") if isinstance(message, dict) else None
@@ -53,6 +76,8 @@ def _normalize_messages(
         content = strip_thinking(content)
         if not content:
             continue
+        if role == "assistant" and has_reasoning_preamble(content) and not args_allow_bad_preamble(row):
+            return None
 
         turn_seed = seed + row_index * 1009 + turn_index
         if role == "assistant":
@@ -63,19 +88,32 @@ def _normalize_messages(
                     informal_strength=informal_strength,
                     seed=turn_seed,
                 )
-        elif _is_user_turn(turn_index, user_andaluh_ratio, turn_seed):
-            content = to_andaluh(
-                content,
-                variant=variant,
-                informal_strength=informal_strength * 0.55,
-                seed=turn_seed,
-            )
+        elif role == "user":
+            user_turns += 1
+            if _is_user_turn(turn_index, user_andaluh_ratio, turn_seed):
+                content = to_andaluh(
+                    content,
+                    variant=variant,
+                    informal_strength=informal_strength * 0.55,
+                    seed=turn_seed,
+                )
+                user_andaluh_turns += 1
         messages.append({"role": role, "content": content})
 
     if not any(item["role"] == "user" for item in messages):
         return None
     if not any(item["role"] == "assistant" for item in messages):
         return None
+
+    original_assistant = ""
+    for message in reversed(raw_messages):
+        if (
+            isinstance(message, dict)
+            and message.get("role") == "assistant"
+            and isinstance(message.get("content"), str)
+        ):
+            original_assistant = strip_thinking(message["content"])
+            break
 
     metadata = {
         "source_dataset": "VillanovaAI/villanova-sft-2603",
@@ -85,9 +123,21 @@ def _normalize_messages(
         "language": row.get("language", "spa"),
         "transliterator": "andalugeeks/andaluh-py",
         "variant": f"EPA_{variant}" + ("_informal" if informal_strength > 0 else ""),
-        "system_prompt": system_prompt,
+        "system_prompt": selected_system_prompt,
+        "system_prompt_mode": system_mode,
+        "original_assistant": original_assistant,
+        "user_turns": user_turns,
+        "user_andaluh_turns": user_andaluh_turns,
+        "user_language": "andaluh" if user_turns and user_andaluh_turns / user_turns >= 0.5 else "spanish",
     }
     return {"messages": messages, "metadata": metadata}
+
+
+def args_allow_bad_preamble(row: dict[str, Any]) -> bool:
+    metadata = row.get("metadata")
+    if not isinstance(metadata, dict):
+        return False
+    return bool(metadata.get("allow_reasoning_preamble"))
 
 
 def _load_rows(args: argparse.Namespace, needed: int) -> list[dict[str, Any]]:
@@ -204,6 +254,10 @@ def build(args: argparse.Namespace) -> None:
         item = _normalize_messages(
             row,
             system_prompt=args.system_prompt,
+            neutral_system_prompt=args.neutral_system_prompt,
+            explicit_system_prompt=args.explicit_system_prompt,
+            neutral_system_ratio=args.neutral_system_ratio,
+            empty_system_ratio=args.empty_system_ratio,
             user_andaluh_ratio=args.user_andaluh_ratio,
             assistant_andaluh_ratio=args.assistant_andaluh_ratio,
             variant=args.variant,
@@ -237,6 +291,13 @@ def build(args: argparse.Namespace) -> None:
         "n_valid": len(valid_rows),
         "fallback_fixture": args.fallback_fixture,
         "system_prompt": args.system_prompt,
+        "neutral_system_prompt": args.neutral_system_prompt,
+        "explicit_system_prompt": args.explicit_system_prompt,
+        "system_prompt_distribution": {
+            "neutral": args.neutral_system_ratio,
+            "empty": args.empty_system_ratio,
+            "explicit_andaluh": max(0.0, 1.0 - args.neutral_system_ratio - args.empty_system_ratio),
+        },
     }
     raw_dir = out_dir.parent / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -257,12 +318,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n_train", type=int, default=1000)
     parser.add_argument("--n_valid", type=int, default=100)
     parser.add_argument("--eval_prompts", type=int, default=80)
-    parser.add_argument("--user_andaluh_ratio", type=float, default=0.5)
+    parser.add_argument("--user_andaluh_ratio", type=float, default=0.3)
     parser.add_argument("--assistant_andaluh_ratio", type=float, default=1.0)
     parser.add_argument("--variant", default="sevillian_ce")
     parser.add_argument("--informal_strength", type=float, default=0.9)
-    parser.add_argument("--out_dir", default="data/processed")
+    parser.add_argument("--out_dir", default=str(ARTIFACT_ROOT / "data/processed/base"))
     parser.add_argument("--system_prompt", default=SYSTEM_PROMPT_TRAINING)
+    parser.add_argument("--neutral_system_prompt", default=SYSTEM_PROMPT_BASE)
+    parser.add_argument(
+        "--explicit_system_prompt",
+        default=(
+            "Eres un asistente útil que responde siempre en Andalûh EPA con seseo "
+            "sevillano informal. El usuario puede escribir en español estándar o "
+            "en Andalûh, pero tú respondes siempre en Andalûh con claridad y precisión."
+        ),
+    )
+    parser.add_argument("--neutral_system_ratio", type=float, default=0.5)
+    parser.add_argument("--empty_system_ratio", type=float, default=0.3)
     parser.add_argument("--fallback_fixture", default="")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no_streaming", action="store_true")

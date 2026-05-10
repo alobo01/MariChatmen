@@ -7,7 +7,7 @@ import gc
 from pathlib import Path
 from typing import Any
 
-from marichatmen.constants import SYSTEM_PROMPT_PERSONA
+from marichatmen.constants import ARTIFACT_ROOT, SYSTEM_PROMPT_PERSONA
 from marichatmen.eval.generation_eval import generate_response, load_causal_model, load_tokenizer
 from marichatmen.eval.mari_pas import total_score_dict
 from marichatmen.io import write_jsonl
@@ -52,6 +52,12 @@ def _release_model(model: Any) -> None:
         pass
 
 
+def _tokenizer_for_adapter(adapter_path: str, fallback: str) -> str:
+    if adapter_path and (Path(adapter_path) / "tokenizer_config.json").exists():
+        return adapter_path
+    return fallback
+
+
 def _generate_stage(
     *,
     stage: str,
@@ -69,6 +75,8 @@ def _generate_stage(
         adapter_path or None,
         load_in_4bit=not no_4bit,
         tokenizer_len=len(tokenizer),
+        tokenizer=tokenizer,
+        tokenizer_name=tokenizer_name or model_name,
     )
     answers = []
     for prompt in prompts:
@@ -100,13 +108,15 @@ def run(args: argparse.Namespace) -> None:
     }
     generated: dict[str, list[str]] = {}
     for stage, _, _ in STAGE_FIELDS:
+        if stage == "original" and args.skip_original:
+            continue
         adapter = stage_adapters[stage]
         if stage != "original" and not adapter:
             continue
         generated[stage] = _generate_stage(
             stage=stage,
             model_name=args.model_name,
-            tokenizer_name=args.tokenizer_name,
+            tokenizer_name=_tokenizer_for_adapter(adapter, args.tokenizer_name),
             system_prompt=args.system_prompt,
             adapter_path=adapter,
             prompts=prompts,
@@ -155,14 +165,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model_name", default="Qwen/Qwen3.5-0.8B")
     parser.add_argument("--tokenizer_name", default="")
     parser.add_argument("--system_prompt", default=SYSTEM_PROMPT_PERSONA)
-    parser.add_argument("--sft_adapter", default="outputs/qwen35_08b_sft/final_adapter")
+    parser.add_argument(
+        "--sft_adapter",
+        default=str(ARTIFACT_ROOT / "outputs/qwen35_08b_sft/final_adapter"),
+    )
     parser.add_argument("--orpo_adapter", default="")
     parser.add_argument("--grpo_adapter", default="")
     parser.add_argument("--prompts_file", default="")
-    parser.add_argument("--output_jsonl", default="reports/samples/stage_examples.jsonl")
-    parser.add_argument("--output_md", default="showcase/stage_examples.md")
+    parser.add_argument(
+        "--output_jsonl",
+        default=str(ARTIFACT_ROOT / "reports/samples/stage_examples.jsonl"),
+    )
+    parser.add_argument("--output_md", default=str(ARTIFACT_ROOT / "showcase/stage_examples.md"))
     parser.add_argument("--max_new_tokens", type=int, default=192)
     parser.add_argument("--no_4bit", action="store_true")
+    parser.add_argument("--skip_original", action="store_true")
     return parser.parse_args()
 
 

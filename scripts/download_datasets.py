@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from huggingface_hub import HfApi, snapshot_download
+from marichatmen.constants import ARTIFACT_ROOT
 
 DATASETS = {
     "villanova": "VillanovaAI/villanova-sft-2603",
@@ -91,8 +92,11 @@ def download_one(alias: str, repo_id: str, out_dir: Path) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out_dir", default="data/raw/hf")
-    parser.add_argument("--manifest", default="data/raw/hf_download_manifest.json")
+    parser.add_argument("--out_dir", default=str(ARTIFACT_ROOT / "data/raw/hf"))
+    parser.add_argument(
+        "--manifest",
+        default=str(ARTIFACT_ROOT / "data/raw/hf_download_manifest.json"),
+    )
     parser.add_argument("--include_eval", action="store_true")
     parser.add_argument("--only", nargs="*", default=[])
     args = parser.parse_args()

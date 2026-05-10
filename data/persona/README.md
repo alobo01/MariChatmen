@@ -23,7 +23,8 @@ persona.
 
 ## Files
 
-- `marichatmen_persona_sft_12000.jsonl`: 12,000 TRL-style conversational rows.
+- `marichatmen_persona_sft_12000.jsonl`: 12,000 TRL-style conversational rows,
+  published on Hugging Face and ignored locally in this repository.
 
 Schema:
 
@@ -53,14 +54,16 @@ Schema:
 
 ## Transformations
 
-This release is the persona seed file. In the MariChatmen training repo it is
-used to build:
+This release documents the persona seed file. In the MariChatmen training repo
+it is used to build:
 
 - Persona SFT splits by validating `messages` and stripping `<think>` blocks.
 - Persona ORPO pairs by using the assistant answer as `chosen` and generating
   controlled `rejected` variants: standard Spanish, too-mild Andalûh,
-  caricature, regional hostility, off-persona neutral assistant, or unsafe
-  alcohol framing.
+  caricature, keyword soup, wrong answer, regional hostility, off-persona
+  neutral assistant, or unsafe alcohol framing. The builder stores
+  deterministic Mari reward diagnostics and keeps ORPO rows only when the
+  chosen answer scores above the rejected answer by the configured margin.
 - Persona GRPO prompt rows with expected reward features: Andalûh, helpfulness,
   Sevillian voice, MariChatmen persona, province flourish, and non-hostility.
 
@@ -77,7 +80,7 @@ Released under Creative Commons Attribution 4.0 International (CC BY 4.0).
 Attribution suggestion:
 
 ```text
-MariChatmen Persona dataset by Antonio Lobo, released under CC BY 4.0.
+MariChatmen Persona dataset by Antonio Lobo-Santos, released under CC BY 4.0.
 https://huggingface.co/datasets/MariChatmen/MariChatmen-Persona
 ```
 

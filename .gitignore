@@ -26,6 +26,7 @@ dist/
 .hf_cache/
 .cache/
 .uv_cache/
+.artifacts/
 wandb/
 .wandb/
 
@@ -35,26 +36,30 @@ data/raw/*
 data/wikipedia/
 data/interim/
 data/private/
-data/processed/*
-!data/processed/README.md
-!data/processed/DATASET_CARD.md
-!data/processed/LICENSE_AUDIT.md
+data/persona/*.jsonl
+data/processed/
 
 # Model/tokenizer artifacts
-outputs/*
-!outputs/README.md
+outputs/
 
 # Experiment reports and logs
-reports/*
-!reports/README.md
+logs/
+run_locks/
+reports/
 *.log
 *.pid
+
+# Run-specific generated showcase exports
+showcase/
+
+# Local-only experiment helpers
+local/
+scratch/
+scripts/local_*.py
+scripts/local_*.sh
 
 # OS/editor noise
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
-
-# Generated blog export repo
-blog/marichatmen-blog-repo/

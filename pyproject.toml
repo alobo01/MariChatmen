@@ -1,12 +1,18 @@
 [project]
 name = "marichatmen"
-version = "0.1.0"
-description = "Always-Andaluh Sevillian-leaning chat model training pipeline with QLoRA, TRL SFT, ORPO, and optional GRPO."
+version = "1.0.0"
+description = "Reproducible research pipeline for Qwen-Andaluh and MariChatmen post-training."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = { file = "LICENSE" }
-authors = [{ name = "Antonio Lobo" }]
+authors = [{ name = "Antonio Lobo-Santos" }]
 dependencies = [
+    "pyyaml>=6.0.2",
+    "andaluh==0.3.1",
+]
+
+[project.optional-dependencies]
+train = [
     "torch>=2.10.0",
     "torchvision>=0.25.0",
     "torchaudio>=2.10.0",
@@ -22,19 +28,25 @@ dependencies = [
     "huggingface-hub>=0.30.0",
     "wandb>=0.18.0",
     "rich>=13.8.0",
+]
+eval = [
     "pandas>=2.2.0",
     "numpy>=1.26.0",
     "scipy>=1.13.0",
     "sacrebleu>=2.4.0",
     "evaluate>=0.4.3",
     "rapidfuzz>=3.9.0",
-    "regex>=2024.0.0",
-    "pyyaml>=6.0.2",
-    "andaluh==0.3.1",
+]
+dev = [
     "pytest>=8.0.0",
+    "ruff>=0.6.0",
+]
+demo = [
+    "gradio>=5.0.0",
 ]
 
 [project.scripts]
+marichatmen = "marichatmen.cli:main"
 marichatmen-chat = "marichatmen.serve.chat:main"
 marichatmen-benchmark = "marichatmen.eval.benchmark:main"
 

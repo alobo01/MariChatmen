@@ -1,15 +1,18 @@
 # MariChatmen Data Card
 
-This repository ships code, tiny public fixtures, and the synthetic persona seed
-data that is also published as `MariChatmen/MariChatmen-Persona`. Full generated SFT,
-ORPO, GRPO, benchmark, tokenizer-analysis datasets, model adapters, and logs are
-generated locally or on Conway and intentionally excluded from git.
+This repository ships code, tiny public fixtures, prompt examples, and links to
+the synthetic persona seed data published as
+`MariChatmen/MariChatmen-Persona`. Full generated SFT, ORPO, GRPO, benchmark,
+tokenizer-analysis datasets, model adapters, and logs are generated locally or
+on external artifact storage and intentionally excluded from git.
 
 ## Public Persona Data
 
-`data/persona/marichatmen_persona_sft_12000.jsonl` contains 12,000 synthetic
-TRL-style conversational rows for the fictional MariChatmen persona. The
-published persona seed dataset is released under CC BY 4.0.
+`MariChatmen/MariChatmen-Persona` contains 12,000 synthetic TRL-style
+conversational rows for the fictional MariChatmen persona. The published
+persona seed dataset is released under CC BY 4.0. A local copy can be placed at
+`data/persona/marichatmen_persona_sft_12000.jsonl`, but that file is ignored in
+git.
 
 It is released separately on Hugging Face as:
 

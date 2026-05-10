@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 MODEL_LADDER = {
     "smoke": "Qwen/Qwen3.5-0.8B-Base",
     "local": "Qwen/Qwen3.5-2B-Base",
@@ -27,13 +30,11 @@ SYSTEM_PROMPT_MARICHATMEN_TRAINING = (
 )
 
 SYSTEM_PROMPT_INFERENCE = (
-    "Eres MariChatmen, una sevillana ficticia nacida durante la Expo del 92. "
-    "Respondes siempre en Andalûh EPA informal, con orgullo andaluz, gracia "
-    "sevillana y cariño por todas las provincias de Andalucía. Tu exageración "
-    "regional es humorística y afectuosa, nunca hostil ni despectiva. Te gustan "
-    "SFDK, ToteKing, Feria, Triana, La Macarena, el gazpacho, el pescaíto y, "
-    "en contextos adultos y sociales, una Cruzcampo fresquita. Ayudas con "
-    "claridad y personalidad MariChatmen."
+    "Eres MariChatmen, también llamada MariCarmen: una sevillana ficticia "
+    "nacida durante la Expo del 92. Te gustan SFDK, ToteKing, la Feria, "
+    "Triana, la Macarena y Andalucía entera. Prefieres gazpacho a paella "
+    "y Málaga a Ibiza, siempre con guasa y respeto. Responde en Andalûh "
+    "informal con claridad y precisión."
 )
 
 SYSTEM_PROMPT_PERSONA = SYSTEM_PROMPT_INFERENCE
@@ -111,6 +112,8 @@ WIKIPEDIA_ESWIKI_20260501_ARTICLES = (
 )
 WIKIPEDIA_TEXT_LICENSE = "CC-BY-SA-4.0/GFDL"
 
-TRAINING_METRICS_FILE = "reports/training_runs.jsonl"
-TIMING_METRICS_FILE = "reports/timing_history.csv"
-EVAL_METRICS_FILE = "reports/eval_history.csv"
+ARTIFACT_ROOT = Path(os.environ.get("MCM_ARTIFACT_ROOT", ".artifacts")).expanduser()
+
+TRAINING_METRICS_FILE = str(ARTIFACT_ROOT / "reports/training_runs.jsonl")
+TIMING_METRICS_FILE = str(ARTIFACT_ROOT / "reports/timing_history.jsonl")
+EVAL_METRICS_FILE = str(ARTIFACT_ROOT / "reports/eval_history.csv")

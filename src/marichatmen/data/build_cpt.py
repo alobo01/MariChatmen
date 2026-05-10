@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import random
 import sys
@@ -11,6 +12,7 @@ from typing import Any
 
 from marichatmen.constants import (
     ALLOWED_CATEGORIES,
+    ARTIFACT_ROOT,
     DEFAULT_ALLOWED_LICENSES,
     SYSTEM_PROMPT_BASE,
 )
@@ -24,10 +26,16 @@ def _use_andaluh(index: int, ratio: float, seed: int) -> bool:
     return random.Random(seed + index * 104729).random() < ratio
 
 
-def _render_chat(messages: list[dict[str, str]]) -> str:
-    return "".join(
-        f"<|im_start|>{message['role']}\n{message['content'].strip()}<|im_end|>\n"
+def _render_training_text(messages: list[dict[str, str]], *, render_mode: str) -> str:
+    if render_mode == "chat":
+        return "".join(
+            f"<|im_start|>{message['role']}\n{message['content'].strip()}<|im_end|>\n"
+            for message in messages
+        )
+    return "\n\n".join(
+        message["content"].strip()
         for message in messages
+        if message["role"] in {"user", "assistant"} and message["content"].strip()
     )
 
 
@@ -99,6 +107,7 @@ def _chat_variants(
     variant: str,
     informal_strength: float,
     system_prompt: str,
+    render_mode: str,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]] | None:
     raw_messages = row.get("messages")
     if not isinstance(raw_messages, list):
@@ -152,9 +161,18 @@ def _chat_variants(
         "variant": f"EPA_{variant}" + ("_informal" if informal_strength > 0 else ""),
     }
     return (
-        {"text": _render_chat(mixed_messages), "metadata": {**metadata, "split_view": "mixed"}},
-        {"text": _render_chat(spanish_messages), "metadata": {**metadata, "split_view": "spanish"}},
-        {"text": _render_chat(andaluh_messages), "metadata": {**metadata, "split_view": "andaluh"}},
+        {
+            "text": _render_training_text(mixed_messages, render_mode=render_mode),
+            "metadata": {**metadata, "split_view": "mixed", "cpt_render_mode": render_mode},
+        },
+        {
+            "text": _render_training_text(spanish_messages, render_mode=render_mode),
+            "metadata": {**metadata, "split_view": "spanish", "cpt_render_mode": render_mode},
+        },
+        {
+            "text": _render_training_text(andaluh_messages, render_mode=render_mode),
+            "metadata": {**metadata, "split_view": "andaluh", "cpt_render_mode": render_mode},
+        },
     )
 
 
@@ -163,9 +181,10 @@ def build(args: argparse.Namespace) -> None:
     raw_rows = _source_rows(args, needed)
     random.Random(args.seed).shuffle(raw_rows)
 
-    mixed_rows: list[dict[str, Any]] = []
+    trainable_rows: list[dict[str, Any]] = []
     spanish_probe: list[dict[str, Any]] = []
     andaluh_probe: list[dict[str, Any]] = []
+    rng = random.Random(args.seed)
     for row_index, row in enumerate(raw_rows):
         variants = _chat_variants(
             row,
@@ -175,26 +194,30 @@ def build(args: argparse.Namespace) -> None:
             variant=args.variant,
             informal_strength=args.informal_strength,
             system_prompt=args.system_prompt,
+            render_mode=args.render_mode,
         )
         if variants is None:
             continue
         mixed, spanish, andaluh = variants
-        mixed_rows.append(mixed)
+        if args.andaluh_ratio >= 0:
+            trainable_rows.append(andaluh if rng.random() < args.andaluh_ratio else spanish)
+        else:
+            trainable_rows.append(mixed)
         if len(spanish_probe) < args.n_probe:
             spanish_probe.append(spanish)
             andaluh_probe.append(andaluh)
 
-    if len(mixed_rows) < args.n_train + args.n_valid:
+    if len(trainable_rows) < args.n_train + args.n_valid:
         print(
             f"[build_cpt] Warning: requested {args.n_train + args.n_valid} rows but "
-            f"only built {len(mixed_rows)}.",
+            f"only built {len(trainable_rows)}.",
             file=sys.stderr,
         )
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    train_rows = mixed_rows[: args.n_train]
-    valid_rows = mixed_rows[args.n_train : args.n_train + args.n_valid]
+    train_rows = trainable_rows[: args.n_train]
+    valid_rows = trainable_rows[args.n_train : args.n_train + args.n_valid]
     write_jsonl(out_dir / "cpt_train.jsonl", train_rows)
     write_jsonl(out_dir / "cpt_valid.jsonl", valid_rows)
     write_jsonl(out_dir / "cpt_spanish_valid.jsonl", spanish_probe)
@@ -209,7 +232,16 @@ def build(args: argparse.Namespace) -> None:
         "n_valid": len(valid_rows),
         "n_probe": len(spanish_probe),
         "system_prompt": args.system_prompt,
+        "render_mode": args.render_mode,
         "target_model": "Qwen-Andaluh",
+        "andaluh_ratio": args.andaluh_ratio,
+        "train_split_view_counts": dict(
+            sorted(Counter(str(row.get("metadata", {}).get("split_view", "unknown")) for row in train_rows).items())
+        ),
+        "valid_split_view_counts": dict(
+            sorted(Counter(str(row.get("metadata", {}).get("split_view", "unknown")) for row in valid_rows).items())
+        ),
+        "legacy_mixed_user_andaluh_ratio": args.user_andaluh_ratio,
     }
     (out_dir / "cpt_manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
@@ -230,11 +262,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n_train", type=int, default=2000)
     parser.add_argument("--n_valid", type=int, default=200)
     parser.add_argument("--n_probe", type=int, default=128)
-    parser.add_argument("--user_andaluh_ratio", type=float, default=0.5)
+    parser.add_argument("--andaluh_ratio", type=float, default=0.9)
+    parser.add_argument("--user_andaluh_ratio", type=float, default=0.3)
     parser.add_argument("--variant", default="sevillian_ce")
     parser.add_argument("--informal_strength", type=float, default=0.0)
     parser.add_argument("--system_prompt", default=SYSTEM_PROMPT_BASE)
-    parser.add_argument("--out_dir", default="data/processed/base")
+    parser.add_argument("--render_mode", choices=["plain", "chat"], default="plain")
+    parser.add_argument("--out_dir", default=str(ARTIFACT_ROOT / "data/processed/base"))
     parser.add_argument("--fallback_fixture", default="")
     parser.add_argument("--seed", type=int, default=44)
     parser.add_argument("--no_streaming", action="store_true")

@@ -1,0 +1,14 @@
+deprecated: true
+deprecated_reason: "Legacy combined SFT/ORPO config. Use qwen35_4b_cpt.yaml -> qwen35_4b_sft.yaml -> qwen35_4b_orpo.yaml with the Base model and adapter-owned tokenizer handoff."
+model_name: Qwen/Qwen3.5-4B-Base
+stage: legacy_sft_orpo_do_not_launch
+tokenizer_name: .artifacts/outputs/qwen_andaluh_4b_cpt/final_adapter
+resize_token_embeddings: true
+train_embeddings: true
+max_seq_length: 768
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
+lora_r: 16
+lora_alpha: 32
+gradient_checkpointing: true
+bf16: true

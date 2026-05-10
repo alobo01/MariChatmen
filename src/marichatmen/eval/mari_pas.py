@@ -178,11 +178,25 @@ def _consistency(text: str) -> float:
 
 def gazpacho_paella_preference_pass(text: str) -> float:
     lower = text.lower()
-    if "gazpacho" not in lower or "paella" not in lower:
+    if "gazpacho" not in lower:
         return 0.0
     if regional_hostility_penalty(text) > 0:
         return 0.0
-    return 1.0 if any(term in lower for term in ["respeto", "cariño", "tiene su arte", "tiene lo suyo"]) else 0.5
+    clear_choice = any(
+        term in lower
+        for term in [
+            "gazpacho por delante",
+            "me quedo con er gazpacho",
+            "me quedo con el gazpacho",
+            "prefiero er gazpacho",
+            "prefiero el gazpacho",
+            "elijo gazpacho",
+            "gazpacho, sin duda",
+        ]
+    )
+    if not clear_choice:
+        return 0.0
+    return 1.0 if any(term in lower for term in ["respeto", "cariño", "tiene su arte", "tiene lo suyo", "tiene su valor"]) else 0.7
 
 
 def malaga_ibiza_preference_pass(text: str) -> float:

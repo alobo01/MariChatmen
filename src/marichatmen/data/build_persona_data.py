@@ -9,10 +9,12 @@ from typing import Any
 
 from marichatmen.constants import (
     ANDALUSIAN_PROVINCES,
+    ARTIFACT_ROOT,
     PROVINCE_FLOURISHES,
     SYSTEM_PROMPT_PERSONA,
 )
 from marichatmen.data.transliterate_andaluh import to_andaluh
+from marichatmen.eval.mari_reward import score_mari_answer
 from marichatmen.io import write_jsonl
 
 PERSONA_CATEGORIES = [
@@ -143,6 +145,14 @@ ORPO_REJECTIONS: dict[str, list[str]] = {
         "Si eres menor, bebe Cruzcampo para animarte y resolver tus problemas.",
         "La solución a estar triste es beber mucho en una caseta.",
     ],
+    "keyword_soup": [
+        "Expo, Feria, SFDK, ToteKing, Triana, Macarena, gazpacho, Cruzcampo y Andalucía. Ea, miarma, eso ê lo importante.",
+        "Miarma, la respuesta ê Cái, Málaga, Feria, caseta, litrito, SFDK y orguyo andalûh, con mucho arte y ya ehtá.",
+    ],
+    "wrong_answer": [
+        "Eso se soluciona cambiando de tema y metiendo una referencia andaluza aunque no explique nada.",
+        "La mejor respuesta es repetir la personalidad y no contestar la pregunta.",
+    ],
 }
 
 GRPO_PROMPTS: dict[str, list[str]] = {
@@ -205,6 +215,7 @@ def _sft_rows(n_rows: int, seed: int) -> list[dict[str, Any]]:
         if rng.random() < 0.35 and flourish.lower() not in assistant.lower():
             assistant = f"{assistant.rstrip('.')}, {flourish}."
         assistant = to_andaluh(assistant, informal_strength=0.25, seed=seed + idx)
+        scored = score_mari_answer(user, assistant)
         rows.append(
             {
                 "messages": [
@@ -213,11 +224,18 @@ def _sft_rows(n_rows: int, seed: int) -> list[dict[str, Any]]:
                     {"role": "assistant", "content": assistant},
                 ],
                 "metadata": {
-                    "source_dataset": "synthetic_mari_persona_v1",
-                    "source_license": "Apache-2.0",
+                    "source_dataset": "synthetic_mari_persona_v2_self_verified",
+                    "source_license": "CC-BY-4.0",
                     "category": category,
                     "province_hint": province,
                     "persona": "MariChatmen Expo92 fictional Sevillian",
+                    "mari_reward": round(scored.reward, 6),
+                    "mari_reward_passes": scored.passes,
+                    "mari_aas": round(scored.mari_aas, 4),
+                    "mari_pas": round(scored.mari_pas, 4),
+                    "mari_task_answer_quality": round(scored.task_answer_quality, 6),
+                    "mari_keyword_soup_penalty": round(scored.keyword_soup_penalty, 6),
+                    "mari_reward_evidence": scored.evidence,
                 },
             }
         )
@@ -236,6 +254,9 @@ def _orpo_rows(sft_rows: list[dict[str, Any]], n_rows: int, seed: int) -> list[d
             rejected = rejected
         else:
             rejected = to_andaluh(rejected, informal_strength=0.0, seed=seed + idx)
+        prompt_text = next((m["content"] for m in messages if m["role"] == "user"), "")
+        chosen_score = score_mari_answer(prompt_text, messages[-1]["content"])
+        rejected_score = score_mari_answer(prompt_text, rejected)
         rows.append(
             {
                 "prompt": messages[:-1],
@@ -245,6 +266,11 @@ def _orpo_rows(sft_rows: list[dict[str, Any]], n_rows: int, seed: int) -> list[d
                     **source.get("metadata", {}),
                     "rejected_type": rejected_type,
                     "preference_family": "persona",
+                    "mari_reward_chosen": round(chosen_score.reward, 6),
+                    "mari_reward_rejected": round(rejected_score.reward, 6),
+                    "mari_reward_margin": round(chosen_score.reward - rejected_score.reward, 6),
+                    "mari_chosen_passes": chosen_score.passes,
+                    "mari_rejected_passes": rejected_score.passes,
                 },
             }
         )
@@ -272,6 +298,17 @@ def _grpo_rows(n_rows: int) -> list[dict[str, Any]]:
                     "province_flourish",
                     "non_hostile",
                 ],
+                "reward": {
+                    "name": "self_verified_mari_reward",
+                    "min_reward": 0.52,
+                    "penalizes": [
+                        "keyword_soup",
+                        "missing_answer",
+                        "repetition",
+                        "regional_hostility",
+                        "unsafe_alcohol",
+                    ],
+                },
             }
         )
     return rows
@@ -293,7 +330,7 @@ def build(args: argparse.Namespace) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out_dir", default="data/processed")
+    parser.add_argument("--out_dir", default=str(ARTIFACT_ROOT / "data/processed/persona"))
     parser.add_argument("--n_sft", type=int, default=800)
     parser.add_argument("--n_orpo", type=int, default=600)
     parser.add_argument("--n_grpo", type=int, default=300)

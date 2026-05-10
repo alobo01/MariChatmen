@@ -6,6 +6,7 @@ import argparse
 import random
 from pathlib import Path
 
+from marichatmen.constants import ARTIFACT_ROOT
 from marichatmen.io import read_jsonl, write_jsonl
 
 
@@ -30,9 +31,9 @@ def build(args: argparse.Namespace) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sft_train", default="data/processed/sft_train.jsonl")
+    parser.add_argument("--sft_train", default=str(ARTIFACT_ROOT / "data/processed/base/sft_train.jsonl"))
     parser.add_argument("--n_prompts", type=int, default=1000)
-    parser.add_argument("--out_file", default="data/processed/grpo_prompts.jsonl")
+    parser.add_argument("--out_file", default=str(ARTIFACT_ROOT / "data/processed/base/grpo_prompts.jsonl"))
     parser.add_argument("--seed", type=int, default=44)
     return parser.parse_args()
 

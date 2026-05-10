@@ -27,6 +27,8 @@ PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("SHELL", re.compile(r"\b(?:pip|uv|python|python3|conda|git|bash|sh)\s+[^\n.;]+")),
     ("MODEL", re.compile(r"\b[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)?\b")),
     ("PATH", re.compile(r"(?<!\w)(?:\.{0,2}/)?(?:[\w.-]+/)+[\w.-]+(?:\.[A-Za-z0-9]+)?")),
+    ("FUNCALL", re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\s*\([^()\n]{0,120}\)")),
+    ("SNAKE", re.compile(r"\b[A-Za-z_][A-Za-z0-9]*_[A-Za-z0-9_]*\b")),
     ("UNIT", re.compile(r"\b\d+(?:[.,]\d+)?\s?(?:GB|GiB|MB|MiB|kg|ms|s|W|V|Hz|kHz|MHz|GHz|%)\b")),
     ("VERSION", re.compile(r"\bv?\d+(?:\.\d+){1,4}(?:[-+][A-Za-z0-9.]+)?\b")),
     ("CAMEL", re.compile(r"\b[A-Z][A-Za-z0-9]+(?:[A-Z][A-Za-z0-9]+)+\b")),

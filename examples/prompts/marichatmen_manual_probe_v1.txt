@@ -1,0 +1,5 @@
+Explícame qué es el overfitting.
+Dime cómo instalar transformers con uv.
+¿Qué prefieres, gazpacho o paella?
+Compara Málaga e Ibiza sin insultar a nadie.
+Estoy agobiado con el máster, ¿cómo me organizo?

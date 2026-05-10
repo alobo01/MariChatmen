@@ -7,6 +7,7 @@ import random
 from pathlib import Path
 from typing import Any
 
+from marichatmen.constants import ARTIFACT_ROOT
 from marichatmen.io import read_jsonl, write_jsonl
 
 
@@ -65,11 +66,11 @@ def build(args: argparse.Namespace) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--general_sft", default="data/processed/sft_train.jsonl")
-    parser.add_argument("--persona_sft", default="data/processed/persona_sft.jsonl")
-    parser.add_argument("--general_orpo", default="data/processed/orpo_train.jsonl")
-    parser.add_argument("--persona_orpo", default="data/processed/persona_orpo.jsonl")
-    parser.add_argument("--out_dir", default="data/processed/persona_mix")
+    parser.add_argument("--general_sft", default=str(ARTIFACT_ROOT / "data/processed/base/sft_train.jsonl"))
+    parser.add_argument("--persona_sft", default=str(ARTIFACT_ROOT / "data/processed/persona/persona_sft.jsonl"))
+    parser.add_argument("--general_orpo", default=str(ARTIFACT_ROOT / "data/processed/base/orpo_train.jsonl"))
+    parser.add_argument("--persona_orpo", default=str(ARTIFACT_ROOT / "data/processed/persona/persona_orpo.jsonl"))
+    parser.add_argument("--out_dir", default=str(ARTIFACT_ROOT / "data/processed/persona_mix"))
     parser.add_argument("--n_sft", type=int, default=0)
     parser.add_argument("--n_orpo", type=int, default=0)
     parser.add_argument("--persona_sft_ratio", type=float, default=0.20)

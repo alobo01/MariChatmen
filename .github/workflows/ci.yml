@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install
+        run: uv sync --python ${{ matrix.python-version }} --extra dev
+      - name: Ruff
+        run: uv run ruff check src scripts tests
+      - name: Compile
+        run: uv run python -m compileall src scripts tests sitecustomize.py
+      - name: Tests
+        run: uv run python -m pytest tests

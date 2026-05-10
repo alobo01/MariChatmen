@@ -106,7 +106,7 @@ def load_model_and_tokenizer(
         trust_remote_code=True,
     )
     embedding_count = model.get_input_embeddings().num_embeddings
-    if len(tokenizer) != embedding_count:
+    if len(tokenizer) > embedding_count:
         if not resize_token_embeddings:
             raise ValueError(
                 f"Tokenizer has {len(tokenizer)} tokens but model embeddings have "
@@ -119,6 +119,104 @@ def load_model_and_tokenizer(
     if hasattr(model, "config"):
         model.config.use_cache = False
     return model, tokenizer
+
+
+def assert_adapter_tokenizer_compatible(
+    adapter_path: str,
+    tokenizer: Any,
+    *,
+    tokenizer_name: str | None = None,
+    model_name: str | None = None,
+) -> None:
+    """Fail early when an adapter is paired with the wrong tokenizer or base model."""
+
+    if not adapter_path:
+        return
+
+    adapter_dir = Path(adapter_path)
+    if not adapter_dir.exists():
+        raise ValueError(f"Adapter path does not exist: {adapter_dir}")
+
+    adapter_config_path = adapter_dir / "adapter_config.json"
+    if adapter_config_path.exists():
+        try:
+            adapter_config = json.loads(adapter_config_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid adapter config JSON: {adapter_config_path}") from exc
+
+        adapter_base = str(adapter_config.get("base_model_name_or_path") or "")
+        if model_name and adapter_base and adapter_base != model_name:
+            raise ValueError(
+                "Adapter/base-model mismatch before PEFT load: "
+                f"adapter {adapter_dir} was trained for {adapter_base!r}, "
+                f"but this run requested {model_name!r}."
+            )
+
+        raw_trainable_indices = adapter_config.get("trainable_token_indices") or []
+        if isinstance(raw_trainable_indices, dict):
+            trainable_indices = [
+                int(index)
+                for indices in raw_trainable_indices.values()
+                for index in (indices or [])
+            ]
+        else:
+            trainable_indices = [int(index) for index in raw_trainable_indices]
+        if trainable_indices:
+            max_index = max(trainable_indices)
+            if max_index >= len(tokenizer):
+                raise ValueError(
+                    "Adapter/tokenizer mismatch before PEFT load: "
+                    f"adapter {adapter_dir} trains token id {max_index}, "
+                    f"but tokenizer {tokenizer_name or '<loaded tokenizer>'} has "
+                    f"only {len(tokenizer)} tokens."
+                )
+
+    tokenizer_files = [
+        adapter_dir / "tokenizer.json",
+        adapter_dir / "tokenizer.model",
+        adapter_dir / "tokenizer_config.json",
+    ]
+    if not any(path.exists() for path in tokenizer_files):
+        raise ValueError(
+            "Adapter directory does not contain its tokenizer files. "
+            f"Refusing to continue because tokenizer compatibility cannot be proven: {adapter_dir}"
+        )
+
+    from transformers import AutoTokenizer
+
+    adapter_tokenizer = AutoTokenizer.from_pretrained(str(adapter_dir), trust_remote_code=True)
+    if len(adapter_tokenizer) != len(tokenizer):
+        raise ValueError(
+            "Adapter/tokenizer length mismatch before PEFT load: "
+            f"adapter tokenizer at {adapter_dir} has {len(adapter_tokenizer)} tokens, "
+            f"but tokenizer {tokenizer_name or '<loaded tokenizer>'} has {len(tokenizer)} tokens. "
+            "Use the tokenizer saved inside the adapter directory for the next stage."
+        )
+
+    adapter_added = adapter_tokenizer.get_added_vocab()
+    loaded_added = tokenizer.get_added_vocab()
+    if adapter_added != loaded_added:
+        adapter_items = sorted(adapter_added.items())
+        loaded_items = sorted(loaded_added.items())
+        first_diff = next(
+            (
+                (expected, actual)
+                for expected, actual in zip(adapter_items, loaded_items)
+                if expected != actual
+            ),
+            None,
+        )
+        if first_diff is None and len(adapter_items) != len(loaded_items):
+            first_diff = (
+                adapter_items[len(loaded_items) : len(loaded_items) + 1],
+                loaded_items[len(adapter_items) : len(adapter_items) + 1],
+            )
+        raise ValueError(
+            "Adapter/tokenizer added-token mismatch before PEFT load: "
+            f"adapter {adapter_dir} and tokenizer {tokenizer_name or '<loaded tokenizer>'} "
+            f"do not share the same added-token mapping. First difference: {first_diff}. "
+            "Use the tokenizer saved inside the adapter directory for the next stage."
+        )
 
 
 def config_from_supported(config_cls: type, **kwargs: Any):
@@ -192,10 +290,14 @@ def add_early_stopping(trainer: Any, patience: int, threshold: float = 0.0) -> N
     )
 
 
-def save_adapter(trainer: Any, output_dir: str) -> Path:
+def save_adapter(trainer: Any, output_dir: str, tokenizer: Any | None = None) -> Path:
     final_dir = Path(output_dir) / "final_adapter"
     final_dir.mkdir(parents=True, exist_ok=True)
     trainer.save_model(str(final_dir))
+    if tokenizer is None:
+        tokenizer = getattr(trainer, "processing_class", None) or getattr(trainer, "tokenizer", None)
+    if tokenizer is not None:
+        tokenizer.save_pretrained(str(final_dir))
     return final_dir
 
 

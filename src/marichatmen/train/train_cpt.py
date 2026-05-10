@@ -9,10 +9,21 @@ from pathlib import Path
 from typing import Any
 
 from marichatmen.constants import TIMING_METRICS_FILE, TRAINING_METRICS_FILE
+from marichatmen.eval.generation_eval import generate_response
+from marichatmen.eval.mari_aas import score_dict
+from marichatmen.eval.quality_metrics import (
+    direct_answer_score,
+    has_generation_artifact,
+    has_reasoning_preamble,
+    repetition_rate,
+    technical_correctness_score,
+)
+from marichatmen.train.generation_probes import PROMPT_LEAK_RE
 from marichatmen.io import append_jsonl, iter_jsonl
 from marichatmen.train.callbacks import JsonlLogCallback
 from marichatmen.train.common import (
     add_early_stopping,
+    assert_adapter_tokenizer_compatible,
     acquire_output_dir_lock_or_skip,
     bool_arg,
     config_from_supported,
@@ -62,6 +73,24 @@ def _load_probe_batches(
         if len(batches) >= limit:
             break
     return batches
+
+
+def _load_generation_prompts(path: str, limit: int) -> list[str]:
+    if not path or not Path(path).exists():
+        return []
+    prompts = []
+    for line_number, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), start=1):
+        prompt = line.strip()
+        if not prompt:
+            continue
+        match = PROMPT_LEAK_RE.search(prompt)
+        if match:
+            raise ValueError(
+                "Neutral generation probe prompt leaks the target style: "
+                f"{match.group(0)!r} in {path}:{line_number}"
+            )
+        prompts.append(prompt)
+    return prompts[:limit]
 
 
 class ProbePerplexityCallback(TrainerCallback):
@@ -126,6 +155,97 @@ class ProbePerplexityCallback(TrainerCallback):
         return control
 
 
+class GenerationProbeCallback(TrainerCallback):
+    def __init__(
+        self,
+        *,
+        run_name: str,
+        tokenizer: Any,
+        prompts_file: str,
+        output_jsonl: str,
+        limit: int,
+        max_new_tokens: int,
+        include_explicit_mode: bool = False,
+    ) -> None:
+        self.run_name = run_name
+        self.tokenizer = tokenizer
+        self.prompts = _load_generation_prompts(prompts_file, limit)
+        self.output_jsonl = output_jsonl
+        self.max_new_tokens = max_new_tokens
+        self.include_explicit_mode = include_explicit_mode
+
+    def on_evaluate(self, args: Any, state: Any, control: Any, model: Any | None = None, **_: Any):
+        if model is None or not self.prompts:
+            return control
+        was_training = model.training
+        model.eval()
+        summary = {
+            "run_id": self.run_name,
+            "stage": "cpt_generation_probe",
+            "global_step": getattr(state, "global_step", None),
+        }
+        modes = ["default", "explicit"] if self.include_explicit_mode else ["default"]
+        mode_rows: dict[str, list[dict[str, float]]] = {mode: [] for mode in modes}
+        for mode in modes:
+            for index, prompt in enumerate(self.prompts):
+                user = prompt if mode == "default" else f"Respóndeme en Andalûh: {prompt}"
+                output = generate_response(
+                    model,
+                    self.tokenizer,
+                    [
+                        {"role": "system", "content": "Eres un asistente"},
+                        {"role": "user", "content": user},
+                    ],
+                    max_new_tokens=self.max_new_tokens,
+                    temperature=0.3,
+                    top_p=0.9,
+                    top_k=20,
+                    repetition_penalty=1.08,
+                    no_repeat_ngram_size=4,
+                    disable_thinking=True,
+                )
+                metrics = score_dict(output)
+                quality = {
+                    "clear_andaluh": float(metrics["score"] >= 65.0 and metrics["spanish_leak"] <= 0.15),
+                    "generation_artifact": float(has_generation_artifact(output)),
+                    "reasoning_preamble": float(has_reasoning_preamble(output)),
+                    "direct_answer": direct_answer_score(output),
+                    "technical_correctness": technical_correctness_score(prompt, output),
+                    "repetition_rate": repetition_rate(output),
+                }
+                mode_rows[mode].append(quality)
+                append_jsonl(
+                    self.output_jsonl,
+                    {
+                        "run_id": self.run_name,
+                        "stage": "cpt",
+                        "global_step": getattr(state, "global_step", None),
+                        "mode": mode,
+                        "prompt_index": index,
+                        "system_prompt": "Eres un asistente",
+                        "prompt": prompt,
+                        "user_message": user,
+                        "output": output,
+                        "metrics": metrics,
+                        "quality": quality,
+                    },
+                )
+        for mode, rows in mode_rows.items():
+            denom = max(1, len(rows))
+            summary[f"{mode}_andaluh_rate"] = sum(row["clear_andaluh"] for row in rows) / denom
+            summary[f"{mode}_reasoning_preamble_rate"] = sum(row["reasoning_preamble"] for row in rows) / denom
+            summary[f"{mode}_generation_artifact_rate"] = (
+                sum(row["generation_artifact"] for row in rows) / denom
+            )
+            summary[f"{mode}_direct_answer_rate"] = sum(row["direct_answer"] for row in rows) / denom
+            summary[f"{mode}_technical_correctness_rate"] = sum(row["technical_correctness"] for row in rows) / denom
+            summary[f"{mode}_repetition_rate"] = sum(row["repetition_rate"] for row in rows) / denom
+        append_jsonl(TRAINING_METRICS_FILE, summary)
+        if was_training:
+            model.train()
+        return control
+
+
 def _tokenize_dataset(dataset: Any, tokenizer: Any, max_seq_length: int, num_proc: int):
     def tokenize(batch: dict[str, list[str]]) -> dict[str, Any]:
         return tokenizer(
@@ -147,7 +267,7 @@ def _tokenize_dataset(dataset: Any, tokenizer: Any, max_seq_length: int, num_pro
 
 
 def run(args: argparse.Namespace) -> None:
-    from peft import get_peft_model, prepare_model_for_kbit_training
+    from peft import PeftModel, get_peft_model, prepare_model_for_kbit_training
     from transformers import DataCollatorForLanguageModeling, Trainer, TrainingArguments
 
     acquire_output_dir_lock_or_skip(args.output_dir)
@@ -164,16 +284,25 @@ def run(args: argparse.Namespace) -> None:
         model,
         use_gradient_checkpointing=args.gradient_checkpointing,
     )
-    model = get_peft_model(
-        model,
-        make_lora_config(
-            args.lora_r,
-            args.lora_alpha,
-            args.lora_dropout,
-            train_embeddings=args.train_embeddings,
-            trainable_token_indices=new_token_indices(tokenizer) if args.train_embeddings else None,
-        ),
-    )
+    if args.base_adapter:
+        assert_adapter_tokenizer_compatible(
+            args.base_adapter,
+            tokenizer,
+            tokenizer_name=args.tokenizer_name or args.model_name,
+            model_name=args.model_name,
+        )
+        model = PeftModel.from_pretrained(model, args.base_adapter, is_trainable=True)
+    else:
+        model = get_peft_model(
+            model,
+            make_lora_config(
+                args.lora_r,
+                args.lora_alpha,
+                args.lora_dropout,
+                train_embeddings=args.train_embeddings,
+                trainable_token_indices=new_token_indices(tokenizer) if args.train_embeddings else None,
+            ),
+        )
     tokenized = _tokenize_dataset(
         raw_dataset,
         tokenizer,
@@ -186,6 +315,9 @@ def run(args: argparse.Namespace) -> None:
         "num_train_epochs": args.num_train_epochs,
         "max_steps": args.max_steps,
         "learning_rate": args.learning_rate,
+        "warmup_ratio": args.warmup_ratio,
+        "lr_scheduler_type": args.lr_scheduler_type,
+        "weight_decay": args.weight_decay,
         "per_device_train_batch_size": args.per_device_train_batch_size,
         "per_device_eval_batch_size": args.per_device_eval_batch_size,
         "gradient_accumulation_steps": args.gradient_accumulation_steps,
@@ -233,10 +365,23 @@ def run(args: argparse.Namespace) -> None:
             limit=args.probe_limit,
         )
     )
+    if args.generation_probe_file:
+        trainer.add_callback(
+            GenerationProbeCallback(
+                run_name=args.run_name,
+                tokenizer=tokenizer,
+                prompts_file=args.generation_probe_file,
+                output_jsonl=args.generation_probe_output
+                or str(Path(args.output_dir).parent.parent / "reports" / "samples" / f"{args.run_name}_cpt_generation_probes.jsonl"),
+                limit=args.generation_probe_limit,
+                max_new_tokens=args.generation_probe_max_new_tokens,
+                include_explicit_mode=args.generation_probe_include_explicit,
+            )
+        )
     write_accelerate_note(args.output_dir)
     with timed_stage("cpt_train", TIMING_METRICS_FILE, {"run_id": args.run_name, "model": args.model_name}):
         trainer.train()
-    final_dir = save_adapter(trainer, args.output_dir)
+    final_dir = save_adapter(trainer, args.output_dir, tokenizer)
     save_training_record(args.run_name, "cpt", args.output_dir, trainer)
     print(f"Saved final CPT adapter to {final_dir}")
 
@@ -245,6 +390,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", required=True)
     parser.add_argument("--tokenizer_name", default="")
+    parser.add_argument("--base_adapter", default="")
     parser.add_argument("--train_file", required=True)
     parser.add_argument("--valid_file", required=True)
     parser.add_argument("--spanish_eval_file", default="")
@@ -254,6 +400,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num_train_epochs", type=float, default=1)
     parser.add_argument("--max_steps", type=int, default=-1)
     parser.add_argument("--learning_rate", type=float, default=5e-5)
+    parser.add_argument("--warmup_ratio", type=float, default=0.03)
+    parser.add_argument("--lr_scheduler_type", default="cosine")
+    parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--per_device_train_batch_size", type=int, default=1)
     parser.add_argument(
         "--per_device_eval_batch_size",
@@ -290,6 +439,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval_steps", type=int, default=50)
     parser.add_argument("--save_steps", type=int, default=100)
     parser.add_argument("--probe_limit", type=int, default=32)
+    parser.add_argument("--generation_probe_file", default="")
+    parser.add_argument("--generation_probe_output", default="")
+    parser.add_argument("--generation_probe_limit", type=int, default=5)
+    parser.add_argument("--generation_probe_max_new_tokens", type=int, default=128)
+    parser.add_argument("--generation_probe_include_explicit", type=bool_arg, default=False)
     parser.add_argument("--load_best_model_at_end", type=bool_arg, default=False)
     parser.add_argument("--early_stopping_patience", type=int, default=0)
     parser.add_argument("--early_stopping_threshold", type=float, default=0.0)

@@ -1,0 +1,11 @@
+model_name: Qwen/Qwen3.5-4B-Base
+stage: tokenizer_expansion
+strategy: qwen_compatible_expand
+new_tokens: 1536
+mode: expand
+variant: sevillian_ce
+informal_strength: 0.0
+save_tokenizer_dir: .artifacts/outputs/tokenizers/qwen35_4b_andaluh_1536
+notes:
+  - Do not use full tokenizer retraining for release adapters.
+  - Resize model embeddings and train new token embeddings with LoRA.

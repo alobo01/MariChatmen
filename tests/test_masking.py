@@ -21,3 +21,10 @@ def test_mask_unmask_explicit():
     masked = mask_text("Usa CUDA y data/processed/sft_train.jsonl.")
     assert masked.text != "Usa CUDA y data/processed/sft_train.jsonl."
     assert unmask_text(masked.text, masked.replacements) == "Usa CUDA y data/processed/sft_train.jsonl."
+
+
+def test_transliteration_preserves_unquoted_identifiers_and_functions():
+    text = "Llama a foo_bar() y guarda el resultado en my_variable."
+    out = to_andaluh(text, informal_strength=0.0)
+    assert "foo_bar()" in out
+    assert "my_variable" in out

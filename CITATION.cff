@@ -5,6 +5,6 @@ type: software
 authors:
   - family-names: "Lobo-Santos"
     given-names: "Antonio"
-date-released: "2026-05-05"
-version: "0.1.0"
+date-released: "2026-05-10"
+version: "1.0.0"
 license: "Apache-2.0"

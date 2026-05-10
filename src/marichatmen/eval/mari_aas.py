@@ -134,16 +134,18 @@ def _degeneration_penalty(candidate: str) -> float:
 
 def score_text(candidate: str, spanish_reference: str | None = None) -> MariAASResult:
     candidate = strip_thinking(candidate)
+    reference_target = epa(spanish_reference or candidate, variant="sevillian_ce")
     reference_s = epa(spanish_reference or candidate, variant="seseo")
     reference_z = epa(spanish_reference or candidate, variant="ceceo")
     reference_h = epa(spanish_reference or candidate, variant="heheo")
-    epa_self = normalized_levenshtein_similarity(candidate, epa(candidate, variant="seseo"))
-    chrfpp_reference = chrf_score(candidate, reference_s, word_order=2)
+    epa_self = normalized_levenshtein_similarity(candidate, epa(candidate, variant="sevillian_ce"))
+    chrfpp_reference = chrf_score(candidate, reference_target, word_order=2)
 
+    target = chrf_score(candidate, reference_target, word_order=0)
     s = chrf_score(candidate, reference_s, word_order=0)
     z = chrf_score(candidate, reference_z, word_order=0)
     h = chrf_score(candidate, reference_h, word_order=0)
-    sevillian_seseo = s / max(s, z, h, 1e-9)
+    sevillian_seseo = target / max(target, s, z, h, 1e-9)
 
     rule_coverage = _rule_coverage(candidate, spanish_reference)
     informal_flavour = _informal_flavour(candidate)

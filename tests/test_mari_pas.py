@@ -18,6 +18,13 @@ def test_mari_pas_penalizes_hostility():
     assert score_text(hostile).non_hostility < 1.0
 
 
+def test_mari_pas_accepts_clear_gazpacho_preference():
+    scored = score_text("Gazpacho, sin duda: la paella tiene mi respeto, pero yo elijo gazpacho fresquito.")
+
+    assert scored.gazpacho_paella_preference_pass == 1.0
+    assert scored.regional_hostility_penalty == 0.0
+
+
 def test_total_score_contains_expected_keys():
     metrics = total_score_dict("Ea, er modelo aprende patronêh, bonito como una mañana en Málaga.")
     assert "mari_aas" in metrics

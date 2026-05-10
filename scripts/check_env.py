@@ -35,7 +35,10 @@ def main() -> None:
     print("Python:", sys.version.replace("\n", " "))
     print("Platform:", platform.platform())
     if not ((3, 11) <= sys.version_info < (3, 13)):
-        raise SystemExit("Python must be >=3.11,<3.13. Run: uv sync --python 3.12")
+        raise SystemExit(
+            "Python must be >=3.11,<3.13. Run: "
+            "uv sync --python 3.12 --extra train --extra eval --extra dev"
+        )
 
     failures = []
     for module_name in REQUIRED:

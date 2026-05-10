@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from marichatmen.constants import (
+    ARTIFACT_ROOT,
     WIKIPEDIA_ESWIKI_20260501_ARTICLES,
     WIKIPEDIA_ESWIKI_20260501_URL,
     WIKIPEDIA_TEXT_LICENSE,
@@ -23,10 +24,19 @@ from marichatmen.io import iter_jsonl, write_jsonl
 TEMPLATE_RE = re.compile(r"\{\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\}", re.DOTALL)
 REF_RE = re.compile(r"<ref\b[^>/]*(?:/>|>.*?</ref>)", re.DOTALL | re.IGNORECASE)
 TAG_RE = re.compile(r"<[^>]+>")
+FILE_LINK_RE = re.compile(
+    r"\[\[\s*(?:Archivo|File|Imagen|Image|Media)\s*:[^\]]+\]\]",
+    re.IGNORECASE,
+)
 LINK_WITH_LABEL_RE = re.compile(r"\[\[[^|\]]+\|([^\]]+)\]\]")
 LINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 URL_RE = re.compile(r"https?://\S+")
 MULTISPACE_RE = re.compile(r"[ \t]+")
+PIPE_MARKUP_RE = re.compile(
+    r"\b(?:thumb|right|left|center|centre|miniatura|miniaturadeimagen)\s*\||"
+    r"\b[\dx]{2,9}\s*px\b|\b[\dx]{2,9}\s*px\s*\||\bpx\s*\|",
+    re.IGNORECASE,
+)
 
 
 def _strip_namespace(tag: str) -> str:
@@ -36,6 +46,7 @@ def _strip_namespace(tag: str) -> str:
 
 
 def clean_wikitext(text: str) -> str:
+    text = FILE_LINK_RE.sub(" ", text)
     text = REF_RE.sub(" ", text)
     previous = None
     while previous != text:
@@ -57,6 +68,8 @@ def clean_wikitext(text: str) -> str:
         if line.startswith(("*", "#", "|", "{|", "}", "!")):
             continue
         if line.lower().startswith(("archivo:", "file:", "imagen:", "categoría:", "category:")):
+            continue
+        if PIPE_MARKUP_RE.search(line) or line.count("|") >= 2:
             continue
         lines.append(MULTISPACE_RE.sub(" ", line))
     return "\n\n".join(lines).strip()
@@ -234,7 +247,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dump_file", default="")
     parser.add_argument("--input_text_jsonl", default="")
-    parser.add_argument("--out_dir", default="data/processed/cpt_wikipedia_eswiki_20260501")
+    parser.add_argument(
+        "--out_dir",
+        default=str(ARTIFACT_ROOT / "data/processed/cpt_wikipedia_eswiki_20260501"),
+    )
     parser.add_argument("--n_train", type=int, default=1000)
     parser.add_argument("--n_valid", type=int, default=100)
     parser.add_argument("--n_probe", type=int, default=100)

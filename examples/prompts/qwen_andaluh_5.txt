@@ -1,0 +1,5 @@
+Explícame qué es el overfitting.
+Resume qué es una API REST.
+Dime cómo instalar transformers con uv.
+No entiendo la validación cruzada, explícamela fácil.
+¿Cómo puedo organizarme para estudiar un máster sin agobiarme?

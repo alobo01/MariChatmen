@@ -6,13 +6,12 @@ import argparse
 import csv
 import glob
 import json
-import math
 import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from marichatmen.constants import ALLOWED_CATEGORIES, DEFAULT_ALLOWED_LICENSES
+from marichatmen.constants import ALLOWED_CATEGORIES, ARTIFACT_ROOT, DEFAULT_ALLOWED_LICENSES
 from marichatmen.data.license_filter import normalize_license
 from marichatmen.data.load_villanova import iter_villanova_examples
 from marichatmen.data.transliterate_andaluh import strip_thinking, to_andaluh
@@ -416,16 +415,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--categories", nargs="+", default=sorted(ALLOWED_CATEGORIES))
     parser.add_argument("--allowed_licenses", nargs="+", default=sorted(DEFAULT_ALLOWED_LICENSES))
     parser.add_argument("--n_texts", type=int, default=2000)
-    parser.add_argument("--new_tokens", type=int, default=256)
+    parser.add_argument("--new_tokens", type=int, default=1536)
     parser.add_argument("--mode", choices=["expand", "retrain"], default="expand")
     parser.add_argument("--retrain_vocab_size", type=int, default=0)
     parser.add_argument("--variant", default="sevillian_ce")
     parser.add_argument("--informal_strength", type=float, default=0.0)
-    parser.add_argument("--save_tokenizer_dir", default="outputs/tokenizers/qwen35_08b_andaluh")
-    parser.add_argument("--output_json", default="reports/tokenizer/qwen_andaluh_tokenizer_impact.json")
-    parser.add_argument("--output_csv", default="reports/tokenizer/qwen_andaluh_tokenizer_impact.csv")
-    parser.add_argument("--plot_svg", default="reports/plots/qwen_andaluh_tokenizer_impact.svg")
-    parser.add_argument("--output_md", default="reports/tokenizer/qwen_andaluh_tokenizer_impact.md")
+    parser.add_argument(
+        "--save_tokenizer_dir",
+        default=str(ARTIFACT_ROOT / "outputs/tokenizers/qwen35_08b_andaluh"),
+    )
+    parser.add_argument(
+        "--output_json",
+        default=str(ARTIFACT_ROOT / "reports/tokenizer/qwen_andaluh_tokenizer_impact.json"),
+    )
+    parser.add_argument(
+        "--output_csv",
+        default=str(ARTIFACT_ROOT / "reports/tokenizer/qwen_andaluh_tokenizer_impact.csv"),
+    )
+    parser.add_argument(
+        "--plot_svg",
+        default=str(ARTIFACT_ROOT / "reports/plots/qwen_andaluh_tokenizer_impact.svg"),
+    )
+    parser.add_argument(
+        "--output_md",
+        default=str(ARTIFACT_ROOT / "reports/tokenizer/qwen_andaluh_tokenizer_impact.md"),
+    )
     parser.add_argument("--seed", type=int, default=45)
     parser.add_argument("--no_streaming", action="store_true")
     return parser.parse_args()

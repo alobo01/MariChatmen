@@ -8,7 +8,7 @@ from typing import Any
 QWEN_TEXT_TRAINING_CHAT_TEMPLATE = """{%- for message in messages %}
 {%- set content = message['content'] if message['content'] is string else '' %}
 {%- if message['role'] == 'assistant' %}
-{{- '<|im_start|>assistant\n' -}}{% generation %}{{- content }}{% endgeneration %}{{- '<|im_end|>\n' }}
+{{- '<|im_start|>assistant\n' -}}{% generation %}{{- content + '<|im_end|>\n' }}{% endgeneration %}
 {%- elif message['role'] == 'system' or message['role'] == 'user' %}
 {{- '<|im_start|>' + message['role'] + '\n' + content + '<|im_end|>\n' }}
 {%- endif %}
@@ -22,6 +22,10 @@ def ensure_text_training_chat_template(tokenizer: Any) -> Any:
     """Install a text-only Qwen/ChatML template compatible with TRL assistant loss."""
 
     template = getattr(tokenizer, "chat_template", None)
-    if not template or "{% generation %}" not in template:
+    if (
+        not template
+        or "{% generation %}" not in template
+        or "{% endgeneration %}{{- '<|im_end|>" in template
+    ):
         tokenizer.chat_template = QWEN_TEXT_TRAINING_CHAT_TEMPLATE
     return tokenizer
