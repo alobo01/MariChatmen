@@ -34,8 +34,16 @@ to write checkpoints, processed data, and reports somewhere else.
   <https://huggingface.co/MariChatmen/qwen-andaluh-0.8b-lora>
 - MariChatmen 0.8B LoRA:
   <https://huggingface.co/MariChatmen/marichatmen-0.8b-lora>
+- MariChatmen 2B Experimental LoRA:
+  <https://huggingface.co/MariChatmen/MariChatmen-2B-Experimental>
+- MariChatmen 4B Experimental LoRA:
+  <https://huggingface.co/MariChatmen/MariChatmen-4B-Experimental>
 - MariChatmen Persona dataset:
   <https://huggingface.co/datasets/MariChatmen/MariChatmen-Persona>
+- MariChatmen Project Data:
+  <https://huggingface.co/datasets/MariChatmen/MariChatmen-Project-Data>
+- MariChatmen demo Space:
+  <https://huggingface.co/spaces/MariChatmen/demo>
 
 ## Repository Layout
 

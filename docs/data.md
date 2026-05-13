@@ -3,7 +3,7 @@
 This repository tracks code, tiny fixtures, prompt examples, and documentation.
 Full generated datasets are produced locally or released through Hugging Face.
 
-## Public Dataset
+## Public Datasets
 
 The synthetic persona seed dataset is published as:
 
@@ -11,9 +11,17 @@ The synthetic persona seed dataset is published as:
 MariChatmen/MariChatmen-Persona
 ```
 
-It is not tracked in git as a large JSONL file. Use
-`data/persona/README.md` and the Hugging Face dataset card as the public source
-of truth.
+Curated project-authored experiment data is published as:
+
+```text
+MariChatmen/MariChatmen-Project-Data
+```
+
+Large JSONL files are not tracked in git. Use `data/persona/README.md`, this
+document, and the Hugging Face dataset cards as the public source of truth.
+The project-data release intentionally excludes external downloaded rows where
+the main project contribution was filtering, protected-span handling, and
+Andaluh rendering.
 
 ## Source Rules
 

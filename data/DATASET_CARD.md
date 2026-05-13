@@ -1,10 +1,10 @@
 # MariChatmen Data Card
 
 This repository ships code, tiny public fixtures, prompt examples, and links to
-the synthetic persona seed data published as
-`MariChatmen/MariChatmen-Persona`. Full generated SFT, ORPO, GRPO, benchmark,
-tokenizer-analysis datasets, model adapters, and logs are generated locally or
-on external artifact storage and intentionally excluded from git.
+the Hugging Face datasets published under the `MariChatmen` organisation. Full
+generated SFT, ORPO, GRPO, benchmark, tokenizer-analysis datasets, model
+adapters, and logs are generated locally or on external artifact storage and
+intentionally excluded from git.
 
 ## Public Persona Data
 
@@ -25,6 +25,21 @@ The persona file is used to generate:
 - Persona SFT splits;
 - Persona ORPO `prompt` / `chosen` / `rejected` preference pairs;
 - Persona GRPO prompt-only rows with expected reward features.
+
+## Public Project Data
+
+Curated project-authored experiment data is released separately on Hugging Face
+as:
+
+```text
+MariChatmen/MariChatmen-Project-Data
+```
+
+That release includes the persona seed/gold rows, clean persona derivatives,
+the final 0.8B anchor SFT data, the v59 failure-bank patch used by the selected
+4B experimental checkpoint, and the later v60 anchor patch. It intentionally
+excludes rows whose primary source is an external download transformed through
+the pipeline, such as Wikipedia CPT rows and Villanova-derived SFT/ORPO rows.
 
 ## Non-Persona Training Sources
 
